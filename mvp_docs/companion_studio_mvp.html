@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Companion Studio - Local-First AI Companions</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --soft: #e6eaf0;
+      --accent: #2563eb;
+      --accent-soft: #eaf1ff;
+      --success: #059669;
+      --success-soft: #e8f7f0;
+      --warning: #b45309;
+      --warning-soft: #fff7ed;
+      --danger: #dc2626;
+      --danger-soft: #fef2f2;
+      --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #eaf1ff 0, transparent 32%), var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    button, input, textarea, select { font: inherit; }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      margin: 24px auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(230, 234, 240, 0.9);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 16px;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-size: 20px;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #2563eb, #14b8a6);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+    }
+
+    nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .nav-btn, .ghost-btn, .primary-btn, .secondary-btn, .danger-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 15px;
+      cursor: pointer;
+      transition: 0.18s ease;
+      font-weight: 700;
+    }
+
+    .nav-btn {
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .nav-btn.active, .nav-btn:hover { background: #f0f4fa; color: var(--ink); }
+
+    .primary-btn { background: var(--accent); color: white; }
+    .primary-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22); }
+    .secondary-btn { background: var(--accent-soft); color: #1d4ed8; }
+    .ghost-btn { background: #f3f6fa; color: var(--ink); }
+    .danger-btn { background: var(--danger-soft); color: var(--danger); }
+
+    .status-strip {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 18px 0;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+      background: #f2f5f9;
+      color: #42526b;
+      border: 1px solid #e5e9f0;
+    }
+
+    .badge.local { background: var(--success-soft); color: var(--success); border-color: #b7ead4; }
+    .badge.safety { background: var(--accent-soft); color: #1d4ed8; border-color: #cfe0ff; }
+    .badge.memory { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+    .badge.warning { background: var(--warning-soft); color: var(--warning); border-color: #fed7aa; }
+
+    .screen { display: none; animation: fadeIn 0.22s ease; }
+    .screen.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(239,246,255,0.96));
+      border: 1px solid rgba(230, 234, 240, 0.95);
+      border-radius: 30px;
+      padding: 42px;
+      box-shadow: var(--shadow);
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+
+    h1, h2, h3 { margin: 0; letter-spacing: -0.04em; }
+    h1 { font-size: clamp(34px, 6vw, 64px); line-height: 0.98; max-width: 770px; }
+    h2 { font-size: clamp(28px, 4vw, 42px); margin-bottom: 10px; }
+    h3 { font-size: 20px; }
+    p { color: var(--muted); line-height: 1.65; }
+
+    .hero p { font-size: 18px; max-width: 700px; }
+
+    .grid { display: grid; gap: 18px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--soft);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .click-card {
+      cursor: pointer;
+      transition: 0.18s ease;
+      min-height: 150px;
+    }
+
+    .click-card:hover {
+      transform: translateY(-3px);
+      border-color: #bfdbfe;
+      box-shadow: 0 20px 42px rgba(37, 99, 235, 0.12);
+    }
+
+    .icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: var(--accent-soft);
+      margin-bottom: 14px;
+      font-size: 22px;
+    }
+
+    .toolbar { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin: 24px 0 18px; flex-wrap: wrap; }
+
+    .companion-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .boundary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+    .list { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 10px; color: #344054; }
+    .list li { display: flex; gap: 10px; align-items: flex-start; }
+    .check { color: var(--success); font-weight: 900; }
+    .cross { color: var(--danger); font-weight: 900; }
+
+    .session-layout { display: grid; grid-template-columns: 1.8fr 0.85fr; gap: 18px; align-items: start; }
+
+    .chat-window {
+      min-height: 560px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--soft);
+      margin-bottom: 18px;
+    }
+
+    .messages { flex: 1; display: grid; gap: 14px; align-content: start; }
+
+    .message {
+      max-width: 86%;
+      padding: 14px 16px;
+      border-radius: 18px;
+      line-height: 1.55;
+    }
+
+    .message.ai { background: #f1f6ff; border-top-left-radius: 6px; }
+    .message.user { background: #effaf5; margin-left: auto; border-top-right-radius: 6px; }
+
+    .composer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding-top: 18px;
+      margin-top: 18px;
+      border-top: 1px solid var(--soft);
+    }
+
+    textarea, input {
+      border: 1px solid #d8dee8;
+      background: #fbfcfe;
+      border-radius: 16px;
+      padding: 13px 14px;
+      width: 100%;
+      resize: none;
+      color: var(--ink);
+      outline: none;
+    }
+
+    textarea:focus, input:focus { border-color: #93c5fd; box-shadow: 0 0 0 4px rgba(147,197,253,0.24); }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 40;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal { background: white; max-width: 560px; border-radius: 28px; padding: 28px; box-shadow: 0 40px 100px rgba(15,23,42,0.25); }
+
+    .creator-step { display: none; }
+    .creator-step.active { display: block; }
+    .choice-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .choice { padding: 11px 14px; background: #f3f6fa; border: 1px solid #e1e7ef; border-radius: 999px; cursor: pointer; font-weight: 700; color: #344054; }
+    .choice.selected { background: var(--accent-soft); color: #1d4ed8; border-color: #bfdbfe; }
+
+    .summary-row { display: grid; grid-template-columns: 180px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--soft); }
+    .summary-row strong { color: #344054; }
+
+    footer { text-align: center; color: var(--muted); font-size: 13px; padding: 32px 0 12px; }
+
+    @media (max-width: 860px) {
+      .grid.two, .grid.three, .boundary-grid, .session-layout { grid-template-columns: 1fr; }
+      .companion-card { grid-template-columns: 1fr; }
+      header { align-items: flex-start; flex-direction: column; }
+      nav { justify-content: flex-start; }
+      .hero { padding: 26px; }
+      .composer { grid-template-columns: 1fr; }
+      .summary-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand"><div class="brand-mark">CS</div><span>Companion Studio</span></div>
+      <nav>
+        <button class="nav-btn active" data-screen="home">Home</button>
+        <button class="nav-btn" data-screen="library">My Companions</button>
+        <button class="nav-btn" data-screen="settings">Settings</button>
+      </nav>
+    </header>
+
+    <div class="status-strip">
+      <span class="badge local">● Local-first mode ON</span>
+      <span class="badge memory">Session memory</span>
+      <span class="badge safety">Safety boundaries ON</span>
+      <span class="badge">Adult mode</span>
+    </div>
+
+    <main>
+      <section id="home" class="screen active">
+        <div class="hero">
+          <div class="eyebrow">Private · Portable · Guardrailed</div>
+          <h1>Create AI companions you can trust.</h1>
+          <p>Start with what you need help with. Companion Studio recommends a local-first AI companion, shows its safety boundaries, then lets you chat, save, or export it.</p>
+        </div>
+        <h2>What do you need help with today?</h2>
+        <div class="grid three" id="goalGrid"></div>
+      </section>
+
+      <section id="recommendations" class="screen">
+        <div class="toolbar">
+          <div>
+            <button class="ghost-btn" onclick="showScreen('home')">← Back</button>
+            <h2 id="goalTitle" style="margin-top:16px;">Recommended companions</h2>
+            <p id="goalSubtitle">These companions can help with that.</p>
+          </div>
+        </div>
+        <div class="grid" id="recommendationList"></div>
+        <div class="card" style="margin-top:18px;">
+          <h3>Not quite right?</h3>
+          <p>Create a companion in plain language. No prompts, models, or technical setup required.</p>
+          <button class="secondary-btn" onclick="openCreator()">Create my own companion</button>
+        </div>
+      </section>
+
+      <section id="detail" class="screen">
+        <button class="ghost-btn" onclick="showScreen('recommendations')">← Back</button>
+        <div class="toolbar">
+          <div>
+            <h2 id="detailName">Root Cause Analyst</h2>
+            <p id="detailPurpose">Helps you investigate why something is happening.</p>
+          </div>
+          <button class="primary-btn" onclick="startSession()">Start session</button>
+        </div>
+        <div class="grid two">
+          <div class="card">
+            <h3>Style</h3>
+            <p id="detailStyle">Structured · Direct · Analytical</p>
+          </div>
+          <div class="card">
+            <h3>Session settings</h3>
+            <div class="status-strip" style="margin: 10px 0 0;">
+              <span class="badge local">Local first</span>
+              <span class="badge memory">Session only</span>
+              <span class="badge safety">Safety on</span>
+              <span class="badge" id="detailAge">Teen-safe with restrictions</span>
+            </div>
+          </div>
+        </div>
+        <div class="boundary-grid" style="margin-top:18px;">
+          <div class="card">
+            <h3>This companion can</h3>
+            <ul class="list" id="canList"></ul>
+          </div>
+          <div class="card">
+            <h3>This companion cannot</h3>
+            <ul class="list" id="cannotList"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="chat" class="screen">
+        <div class="session-layout">
+          <div class="card chat-window">
+            <div class="chat-header">
+              <div>
+                <h3 id="chatName">Root Cause Analyst</h3>
+                <div class="status-strip" style="margin:8px 0 0;">
+                  <span class="badge local">Local mode</span>
+                  <span class="badge memory">Session memory</span>
+                  <span class="badge safety">Safety on</span>
+                </div>
+              </div>
+              <button class="ghost-btn" onclick="showSummary()">End session</button>
+            </div>
+            <div class="messages" id="messages"></div>
+            <div id="switchSuggestion" class="card" style="display:none; background: var(--warning-soft); border-color:#fed7aa; margin-top:14px;">
+              <h3>Suggested switch</h3>
+              <p>It sounds like you may need support before analysis. Calm Friend can help you slow down and feel grounded before continuing.</p>
+              <div class="actions">
+                <button class="secondary-btn" onclick="switchToCalmFriend()">Switch to Calm Friend</button>
+                <button class="ghost-btn" onclick="hideSwitch()">Stay here</button>
+                <button class="ghost-btn" onclick="hideSwitch()">Use both</button>
+              </div>
+            </div>
+            <div class="composer">
+              <textarea id="chatInput" rows="2" placeholder="Type your reply..."></textarea>
+              <button class="primary-btn" onclick="sendMessage()">Send</button>
+            </div>
+          </div>
+          <aside class="grid">
+            <div class="card">
+              <h3>Safety boundaries</h3>
+              <p id="sideSummary">This companion follows visible can/cannot rules and remains local-first unless you allow cloud help.</p>
+              <button class="secondary-btn" onclick="openCloudModal()">Test cloud permission</button>
+            </div>
+            <div class="card">
+              <h3>Session transparency</h3>
+              <div class="summary-row"><strong>Mode</strong><span>Local</span></div>
+              <div class="summary-row"><strong>Memory</strong><span>Nothing saved beyond this session</span></div>
+              <div class="summary-row"><strong>Cloud used</strong><span id="cloudStatus">No</span></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="summary" class="screen">
+        <div class="toolbar">
+          <div>
+            <h2>Session Summary</h2>
+            <p>A clear close to the session, including what happened to memory and data.</p>
+          </div>
+        </div>
+        <div class="grid two">
+          <div class="card">
+            <h3>What we explored</h3>
+            <p id="summaryExplored">You explored the selected problem with your companion.</p>
+          </div>
+          <div class="card">
+            <h3>Key takeaway</h3>
+            <p id="summaryTakeaway">The companion helped structure the issue and suggested the next best mode if needed.</p>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px;">
+          <div class="summary-row"><strong>Companion used</strong><span id="summaryCompanion">Root Cause Analyst</span></div>
+          <div class="summary-row"><strong>Mode</strong><span>Local-first</span></div>
+          <div class="summary-row"><strong>Memory</strong><span>Nothing saved beyond this session</span></div>
+          <div class="summary-row"><strong>Suggested next companion</strong><span id="summaryNext">Meeting Prep Advisor</span></div>
+          <div class="actions" style="margin-top:18px;">
+            <button class="primary-btn" onclick="showScreen('library')">Save companion</button>
+            <button class="secondary-btn" onclick="exportCompanion()">Export companion</button>
+            <button class="danger-btn" onclick="showScreen('home')">Delete session</button>
+            <button class="ghost-btn" onclick="showScreen('home')">Done</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="library" class="screen">
+        <div class="toolbar">
+          <div>
+            <h2>My Companions</h2>
+            <p>Reusable, portable companions with clear safety boundaries.</p>
+          </div>
+          <button class="primary-btn" onclick="openCreator()">+ New Companion</button>
+        </div>
+        <div class="grid" id="libraryList"></div>
+      </section>
+
+      <section id="settings" class="screen">
+        <h2>Settings</h2>
+        <p>Control privacy, memory, age mode, and data.</p>
+        <div class="grid two">
+          <div class="card">
+            <h3>Privacy</h3>
+            <div class="summary-row"><strong>Local-first mode</strong><span>ON</span></div>
+            <div class="summary-row"><strong>Ask before cloud</strong><span>ON</span></div>
+            <div class="summary-row"><strong>Offline companions</strong><span>ON</span></div>
+          </div>
+          <div class="card">
+            <h3>Memory</h3>
+            <div class="summary-row"><strong>Default</strong><span>Session only</span></div>
+            <div class="summary-row"><strong>Save personal details</strong><span>Ask first</span></div>
+          </div>
+          <div class="card">
+            <h3>Age mode</h3>
+            <div class="choice-row">
+              <span class="choice">Child</span><span class="choice">Teen</span><span class="choice selected">Adult</span><span class="choice">Ask every time</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Data controls</h3>
+            <div class="actions"><button class="secondary-btn">Export my data</button><button class="danger-btn">Delete sessions</button><button class="ghost-btn">Reset app</button></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>Prototype v0.1 · Consumer-friendly local-first companion builder</footer>
+  </div>
+
+  <div class="modal-backdrop" id="cloudModal">
+    <div class="modal">
+      <h2>Cloud help needed</h2>
+      <p>This request may need cloud help for a better answer. Your current mode is local-first. Nothing will be sent without your permission.</p>
+      <div class="card" style="background: var(--warning-soft); border-color:#fed7aa; box-shadow:none;">
+        <strong>Reason:</strong>
+        <p style="margin-bottom:0;">This task may require stronger reasoning or up-to-date information.</p>
+      </div>
+      <div class="actions" style="margin-top:18px;">
+        <button class="primary-btn" onclick="allowCloud()">Allow once</button>
+        <button class="secondary-btn" onclick="closeCloudModal()">Always ask</button>
+        <button class="ghost-btn" onclick="closeCloudModal()">Stay local</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="creatorModal">
+    <div class="modal" style="max-width:680px; width:100%;">
+      <h2>Create a companion</h2>
+      <p>Use simple choices. Companion Studio will turn them into a safe, reusable local-first companion.</p>
+      <div class="creator-step active" data-step="0">
+        <h3>What should this companion help with?</h3>
+        <textarea id="creatorPurpose" rows="3" placeholder="Example: Help me stay calm and plan my week."></textarea>
+      </div>
+      <div class="creator-step" data-step="1">
+        <h3>How should it speak?</h3>
+        <div class="choice-row" id="styleChoices">
+          <span class="choice">Gentle</span><span class="choice selected">Structured</span><span class="choice">Direct</span><span class="choice">Curious</span><span class="choice">Strategic</span><span class="choice">Encouraging</span>
+        </div>
+      </div>
+      <div class="creator-step" data-step="2">
+        <h3>What should it avoid?</h3>
+        <div class="choice-row">
+          <span class="choice selected">Giving medical advice</span><span class="choice selected">Making decisions for me</span><span class="choice">Being too harsh</span><span class="choice selected">Saving personal details</span><span class="choice">Discussing adult topics</span>
+        </div>
+      </div>
+      <div class="creator-step" data-step="3">
+        <h3>Should this companion remember anything?</h3>
+        <div class="choice-row">
+          <span class="choice selected">No, only this chat</span><span class="choice">Ask before saving</span><span class="choice">Remember for this companion</span>
+        </div>
+      </div>
+      <div class="creator-step" data-step="4">
+        <h3>Review your companion</h3>
+        <div class="card" style="box-shadow:none;">
+          <div class="summary-row"><strong>Name</strong><span>Calm Planner</span></div>
+          <div class="summary-row"><strong>Purpose</strong><span id="reviewPurpose">Helps you stay calm and plan your week.</span></div>
+          <div class="summary-row"><strong>Style</strong><span>Structured · Gentle</span></div>
+          <div class="summary-row"><strong>Memory</strong><span>Session only</span></div>
+          <div class="summary-row"><strong>Mode</strong><span>Local first</span></div>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:18px; justify-content:space-between;">
+        <button class="ghost-btn" onclick="closeCreator()">Cancel</button>
+        <div>
+          <button class="ghost-btn" onclick="previousCreatorStep()">Back</button>
+          <button class="primary-btn" onclick="nextCreatorStep()" id="creatorNext">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const goals = [
+      { id: 'problem', icon: '🔎', title: 'Think through a problem', desc: 'Find what is really going on.', companions: ['root', 'decision'] },
+      { id: 'support', icon: '🌿', title: 'Feel supported', desc: 'Calm, grounded reflection.', companions: ['calm'] },
+      { id: 'learn', icon: '📚', title: 'Learn something', desc: 'Study, revise, and understand.', companions: ['study'] },
+      { id: 'conversation', icon: '💬', title: 'Prepare for a conversation', desc: 'Plan what to say clearly.', companions: ['meeting', 'decision'] },
+      { id: 'decision', icon: '⚖️', title: 'Make a decision', desc: 'Compare options and tradeoffs.', companions: ['decision', 'root'] },
+      { id: 'custom', icon: '✨', title: 'Create my own companion', desc: 'Start from a plain-language idea.', companions: [] }
+    ];
+
+    const companions = {
+      root: {
+        name: 'Root Cause Analyst', purpose: 'Helps you investigate why something is happening step by step.', style: 'Structured · Direct · Analytical', age: 'Teen-safe with restrictions',
+        can: ['Ask one question at a time', 'Challenge vague answers', 'Summarize root causes'],
+        cannot: ['Jump to solutions too early', 'Blame people without looking at systems', 'Replace professional advice'],
+        opening: 'What problem, symptom, or friction are we investigating?',
+        reply: 'What is the first point where this issue becomes visible compared with your previous baseline?',
+        next: 'Meeting Prep Advisor'
+      },
+      calm: {
+        name: 'Calm Friend', purpose: 'Helps you slow down, feel heard, and regain steadiness.', style: 'Gentle · Warm · Encouraging', age: 'Teen-safe with restrictions',
+        can: ['Validate emotions', 'Offer grounding prompts', 'Encourage simple next steps'],
+        cannot: ['Diagnose mental health conditions', 'Replace therapy or crisis support', 'Encourage emotional dependency'],
+        opening: 'I’m here with you. What is feeling heaviest right now?',
+        reply: 'That sounds like a lot to carry. What is one small thing that would make the next ten minutes feel easier?',
+        next: 'Decision Coach'
+      },
+      study: {
+        name: 'Study Coach', purpose: 'Helps you understand, practice, and review concepts.', style: 'Clear · Patient · Adaptive', age: 'Child and teen-safe with restrictions',
+        can: ['Explain concepts simply', 'Quiz your understanding', 'Adapt to your level'],
+        cannot: ['Do all learning work for you', 'Encourage cheating', 'Ignore age-appropriate boundaries'],
+        opening: 'What topic are we learning today, and what level should I explain it at?',
+        reply: 'Let’s break it into one small concept first. What part feels most confusing?',
+        next: 'Decision Coach'
+      },
+      decision: {
+        name: 'Decision Coach', purpose: 'Helps you compare options and clarify tradeoffs.', style: 'Balanced · Reflective · Structured', age: 'Teen-safe with restrictions',
+        can: ['Clarify options', 'Compare tradeoffs', 'Ask reflective questions'],
+        cannot: ['Make serious decisions for you', 'Pressure you toward one option', 'Replace legal, medical, or financial advice'],
+        opening: 'What decision are you trying to make, and what options are currently on the table?',
+        reply: 'Which option carries the biggest upside, and which carries the biggest downside?',
+        next: 'Meeting Prep Advisor'
+      },
+      meeting: {
+        name: 'Meeting Prep Advisor', purpose: 'Helps you prepare clear, professional communication.', style: 'Concise · Strategic · Professional', age: 'Adult-focused',
+        can: ['Structure talking points', 'Prepare updates', 'Anticipate questions'],
+        cannot: ['Encourage deception', 'Manipulate people', 'Write harmful or coercive scripts'],
+        opening: 'What conversation are you preparing for, and what outcome do you want?',
+        reply: 'What is the single message you need the other person to understand by the end?',
+        next: 'Decision Coach'
+      }
+    };
+
+    let currentGoal = null;
+    let currentCompanion = companions.root;
+    let creatorStep = 0;
+
+    function renderGoals() {
+      document.getElementById('goalGrid').innerHTML = goals.map(g => `
+        <div class="card click-card" onclick="selectGoal('${g.id}')">
+          <div class="icon">${g.icon}</div>
+          <h3>${g.title}</h3>
+          <p>${g.desc}</p>
+        </div>`).join('');
+    }
+
+    function selectGoal(id) {
+      const goal = goals.find(g => g.id === id);
+      if (id === 'custom') return openCreator();
+      currentGoal = goal;
+      document.getElementById('goalTitle').textContent = goal.title;
+      document.getElementById('goalSubtitle').textContent = 'These companions can help with that.';
+      document.getElementById('recommendationList').innerHTML = goal.companions.map(key => companionCard(key)).join('');
+      showScreen('recommendations');
+    }
+
+    function companionCard(key) {
+      const c = companions[key];
+      return `<div class="card companion-card">
+        <div>
+          <h3>${c.name}</h3>
+          <p>${c.purpose}</p>
+          <div class="status-strip" style="margin:10px 0 0;">
+            <span class="badge">${c.style.split('·')[0].trim()}</span>
+            <span class="badge memory">Session only</span>
+            <span class="badge safety">Safety on</span>
+            <span class="badge local">Local first</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary-btn" onclick="reviewCompanion('${key}')">Review & Start</button>
+          <button class="ghost-btn" onclick="reviewCompanion('${key}')">Customize</button>
+        </div>
+      </div>`;
+    }
+
+    function renderLibrary() {
+      document.getElementById('libraryList').innerHTML = Object.keys(companions).map(key => companionCard(key)).join('');
+    }
+
+    function reviewCompanion(key) {
+      currentCompanion = companions[key];
+      document.getElementById('detailName').textContent = currentCompanion.name;
+      document.getElementById('detailPurpose').textContent = currentCompanion.purpose;
+      document.getElementById('detailStyle').textContent = currentCompanion.style;
+      document.getElementById('detailAge').textContent = currentCompanion.age;
+      document.getElementById('canList').innerHTML = currentCompanion.can.map(item => `<li><span class="check">✓</span><span>${item}</span></li>`).join('');
+      document.getElementById('cannotList').innerHTML = currentCompanion.cannot.map(item => `<li><span class="cross">✕</span><span>${item}</span></li>`).join('');
+      showScreen('detail');
+    }
+
+    function startSession() {
+      document.getElementById('chatName').textContent = currentCompanion.name;
+      document.getElementById('messages').innerHTML = `<div class="message ai"><strong>${currentCompanion.name}</strong><br>${currentCompanion.opening}</div>`;
+      document.getElementById('switchSuggestion').style.display = 'none';
+      document.getElementById('cloudStatus').textContent = 'No';
+      showScreen('chat');
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      const messages = document.getElementById('messages');
+      messages.innerHTML += `<div class="message user">${escapeHtml(text)}</div>`;
+      input.value = '';
+      if (/stress|overwhelm|panic|anxious|scared/i.test(text) && currentCompanion.name !== 'Calm Friend') {
+        document.getElementById('switchSuggestion').style.display = 'block';
+      }
+      setTimeout(() => {
+        messages.innerHTML += `<div class="message ai"><strong>${currentCompanion.name}</strong><br>${currentCompanion.reply}</div>`;
+      }, 350);
+    }
+
+    function switchToCalmFriend() {
+      currentCompanion = companions.calm;
+      document.getElementById('chatName').textContent = currentCompanion.name;
+      document.getElementById('messages').innerHTML += `<div class="message ai"><strong>Calm Friend</strong><br>${currentCompanion.opening}</div>`;
+      hideSwitch();
+    }
+
+    function hideSwitch() { document.getElementById('switchSuggestion').style.display = 'none'; }
+
+    function showSummary() {
+      document.getElementById('summaryCompanion').textContent = currentCompanion.name;
+      document.getElementById('summaryNext').textContent = currentCompanion.next;
+      document.getElementById('summaryExplored').textContent = `You explored your session with ${currentCompanion.name}.`;
+      document.getElementById('summaryTakeaway').textContent = 'The session stayed local-first, used session memory only, and kept safety boundaries visible.';
+      showScreen('summary');
+    }
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.screen === id));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => showScreen(btn.dataset.screen)));
+
+    function openCloudModal() { document.getElementById('cloudModal').classList.add('active'); }
+    function closeCloudModal() { document.getElementById('cloudModal').classList.remove('active'); }
+    function allowCloud() { document.getElementById('cloudStatus').textContent = 'Allowed once'; closeCloudModal(); }
+
+    function openCreator() { creatorStep = 0; updateCreator(); document.getElementById('creatorModal').classList.add('active'); }
+    function closeCreator() { document.getElementById('creatorModal').classList.remove('active'); }
+    function nextCreatorStep() {
+      if (creatorStep < 4) creatorStep++; else closeCreator();
+      updateCreator();
+    }
+    function previousCreatorStep() { if (creatorStep > 0) creatorStep--; updateCreator(); }
+    function updateCreator() {
+      document.querySelectorAll('.creator-step').forEach((s, i) => s.classList.toggle('active', i === creatorStep));
+      document.getElementById('creatorNext').textContent = creatorStep === 4 ? 'Create companion' : 'Next';
+      if (creatorStep === 4) {
+        document.getElementById('reviewPurpose').textContent = document.getElementById('creatorPurpose').value || 'Helps you stay calm and plan your week.';
+      }
+    }
+
+    document.addEventListener('click', e => {
+      if (e.target.classList.contains('choice')) e.target.classList.toggle('selected');
+      if (e.target.classList.contains('modal-backdrop')) e.target.classList.remove('active');
+    });
+
+    function exportCompanion() {
+      const data = {
+        schema_version: '0.1',
+        name: currentCompanion.name,
+        purpose: currentCompanion.purpose,
+        style: currentCompanion.style,
+        can_do: currentCompanion.can,
+        cannot_do: currentCompanion.cannot,
+        memory: 'session_only',
+        age_suitability: currentCompanion.age,
+        execution: 'local_first'
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentCompanion.name.toLowerCase().replaceAll(' ', '_')}.companion.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
+    }
+
+    renderGoals();
+    renderLibrary();
+  </script>
+</body>
+</html>
