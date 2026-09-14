@@ -9,6 +9,14 @@ const args = process.platform === 'win32'
 if (process.platform !== 'win32' && !(process.platform === 'darwin' && process.arch === 'arm64')) {
   throw new Error('Bundled runtime preparation supports Windows and Apple silicon macOS only.');
 }
-const result = spawnSync(command, args, { cwd: root, stdio: 'inherit' });
+const env = { ...process.env };
+// A PowerShell 7 parent can pass incompatible module paths to Windows PowerShell 5.
+// Let the child shell initialize its own default module paths.
+if (process.platform === 'win32') {
+  for (const key of Object.keys(env)) {
+    if (key.toLowerCase() === 'psmodulepath') delete env[key];
+  }
+}
+const result = spawnSync(command, args, { cwd: root, stdio: 'inherit', env });
 if (result.error) throw result.error;
 process.exit(result.status ?? 1);

@@ -41,7 +41,9 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml managed_local_integrati
 
 CI sets `COMPANION_TEST_CPU=1` because hosted VMs may not expose Metal. This override exists only in test builds. Leave it unset when running this test on a real MacBook to exercise Metal.
 
-The workflow must pass before an installer is considered built and verified. At implementation time, validation was performed on Windows; macOS execution is pending. A macOS 13 deployment target is checked automatically but is not proof of testing on macOS 13. Record MacBook model, OS version, artifact commit, and results for these manual checks before declaring the preview hardware-tested:
+The first Mac build of commit `0bff74a` passed on September 14, 2026: 62 frontend tests, 15 native tests, all three Keychain phases, packaged-runtime inference/restart, and bundle verification. Download the [verified preview artifact](https://github.com/ronterrence/companion/actions/runs/34857052754/artifacts/10353404504). Its DMG SHA-256 is `6e38c48b24ed55337257bd3e9db7e601f4284b63b799cf290e7d3d5b3bbfdf0a`. The separate Windows job required a follow-up runner compatibility fix.
+
+A macOS 13 deployment target is checked automatically but is not proof of testing on macOS 13. Metal and interactive installation still require a real MacBook. Record MacBook model, OS version, artifact commit, and results for these manual checks before declaring the preview hardware-tested:
 
 - Install from the downloaded DMG on a MacBook without development tools; verify first-open behavior and UI rendering.
 - Download the model, generate a reply with Metal, restart, and chat with networking disabled.
