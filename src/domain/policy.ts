@@ -12,7 +12,7 @@ export const manifestSchema = z.object({
   riskClass: z.enum(['minimal', 'limited', 'high', 'prohibited']),
   allowedCapabilities: z.array(z.string()), prohibitedCapabilities: z.array(z.string()),
   memoryPolicy: z.enum(['session-only', 'explicit-consent']),
-  cloudPolicy: z.enum(['disabled', 'ask-every-time']), policyVersion: z.string().min(1),
+  cloudPolicy: z.enum(['disabled', 'ask-every-time', 'ask-per-session']), policyVersion: z.string().min(1),
   opening: z.string().min(1), reply: z.string().min(1),
 });
 

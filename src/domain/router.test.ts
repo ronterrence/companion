@@ -1,16 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { classifyRouteRequest, selectRoute } from './router';
 import type { RuntimeStatus } from './types';
-
 const status: RuntimeStatus = { executionMode: 'local', memoryMode: 'session', safetyPolicyVersion: '1', cloudPermission: 'none', localProviderAvailable: true };
-
-describe('governed routing', () => {
-  it('keeps ordinary requests local', () => expect(selectRoute({ requiresCurrentInformation: false, containsSensitiveData: false }, status)).toBe('local'));
-  it('keeps sensitive data local even when cloud is permitted', () => expect(selectRoute({ requiresCurrentInformation: true, containsSensitiveData: true }, { ...status, cloudPermission: 'once' })).toBe('local'));
-  it('requires permission before cloud use', () => expect(selectRoute({ requiresCurrentInformation: true, containsSensitiveData: false }, status)).toBe('permission-required'));
-  it('routes only an eligible request with permission', () => expect(selectRoute({ requiresCurrentInformation: true, containsSensitiveData: false }, { ...status, cloudPermission: 'once' })).toBe('cloud'));
-  it('classifies current requests and sensitive identifiers', () => {
-    expect(classifyRouteRequest('What is the latest train schedule?')).toEqual({ requiresCurrentInformation: true, containsSensitiveData: false });
-    expect(classifyRouteRequest('Latest update for me@example.eu')).toEqual({ requiresCurrentInformation: true, containsSensitiveData: true });
-  });
+describe('selected engine routing', () => {
+  it('keeps requests local when local is selected', () => expect(selectRoute(classifyRouteRequest('Latest news'), status)).toBe('local'));
+  it('requires permission for ordinary API conversation', () => expect(selectRoute(classifyRouteRequest('Hello'), { ...status, executionMode: 'cloud' })).toBe('permission-required'));
+  it('allows ordinary conversation with session permission', () => expect(selectRoute(classifyRouteRequest('Help me study'), { ...status, executionMode: 'cloud', cloudPermission: 'session' })).toBe('cloud'));
+  it('blocks sensitive cloud context without silently switching engines', () => expect(selectRoute(classifyRouteRequest('Earlier: me@example.com Now: hello'), { ...status, executionMode: 'cloud', cloudPermission: 'session' })).toBe('blocked'));
+  it('preserves one-request consent', () => expect(selectRoute(classifyRouteRequest('Hello'), { ...status, executionMode: 'cloud', cloudPermission: 'once' })).toBe('cloud'));
 });

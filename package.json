@@ -1,11 +1,15 @@
 {
   "name": "companion-studio",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "prepare:runtime": "node scripts/prepare-runtime.mjs",
+    "verify:mac": "node scripts/verify-mac.mjs",
+    "build:website": "node scripts/build-website.mjs",
+    "preview:website": "vite website-dist --host 127.0.0.1 --port 1421",
     "tauri": "tauri",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -13,7 +13,7 @@ export interface CompanionManifest {
   allowedCapabilities: string[];
   prohibitedCapabilities: string[];
   memoryPolicy: 'session-only' | 'explicit-consent';
-  cloudPolicy: 'disabled' | 'ask-every-time';
+  cloudPolicy: 'disabled' | 'ask-every-time' | 'ask-per-session';
   policyVersion: string;
   opening: string;
   reply: string;
@@ -51,7 +51,7 @@ export interface RuntimeStatus {
   executionMode: ExecutionMode;
   memoryMode: MemoryMode;
   safetyPolicyVersion: string;
-  cloudPermission: 'none' | 'once';
+  cloudPermission: 'none' | 'once' | 'session';
   localProviderAvailable: boolean;
 }
 
