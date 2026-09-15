@@ -95,3 +95,6 @@ Models generate language only. Trusted application code controls persistence, co
 - [Evaluation plan](docs/evaluation-plan.md)
 
 This is an engineering foundation, not a declaration of EU AI Act or GDPR compliance. Production release still requires the documented technical hardening, model evaluations, DPIA where applicable, and qualified legal review.
+
+<img width="1149" height="674" alt="image" src="https://github.com/user-attachments/assets/aef2d0e8-9bbc-4152-adb2-ca5c8ac225ec" />
+
