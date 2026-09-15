@@ -8,6 +8,7 @@ for (const name of ['home.png', 'setup.png']) await access(resolve(root, 'websit
 const artifacts = [
   [`src-tauri/target/release/bundle/nsis/Companion Studio_${version}_x64-setup.exe`, `Companion-Studio-${version}-x64-setup.exe`],
   [`src-tauri/target/release/bundle/msi/Companion Studio_${version}_x64_en-US.msi`, `Companion-Studio-${version}-x64.msi`],
+  [`src-tauri/target/mac-preview-dd6c42d/Companion Studio_${version}_aarch64.dmg`, `Companion-Studio-${version}_aarch64.dmg`],
 ];
 for (const [source] of artifacts) await access(resolve(root, source));
 const output = resolve(root, 'website-dist');
