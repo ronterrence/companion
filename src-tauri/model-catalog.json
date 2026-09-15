@@ -1,0 +1,14 @@
+{
+  "id": "qwen3-0.6b-q4_0",
+  "name": "Qwen3 0.6B — basic local model",
+  "filename": "Qwen3-0.6B-Q4_0.gguf",
+  "revision": "b5f37287796e5be0ea3dab2e7430873fb3f73e49",
+  "url": "https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF/resolve/b5f37287796e5be0ea3dab2e7430873fb3f73e49/Qwen3-0.6B-Q4_0.gguf",
+  "size": 428970080,
+  "sha256": "da2572f16c06133561ce56accaa822216f2391ef4d37fba427801cd6736417d4",
+  "license": "Apache-2.0",
+  "licenseUrl": "https://huggingface.co/Qwen/Qwen3-0.6B/blob/main/LICENSE",
+  "minimumRam": 4294967296,
+  "recommendedRam": 8589934592,
+  "runtime": "llama.cpp b10025 CPU x64"
+}

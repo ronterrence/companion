@@ -184,6 +184,33 @@ impl Database {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore = "Writes disposable native Keychain entries; run write/read/delete phases in separate processes"]
+    fn macos_keychain_integration() {
+        use keyring::v1::{Entry, Error};
+        let account = std::env::var("COMPANION_KEYCHAIN_TEST_ACCOUNT").expect("unique test account");
+        let phase = std::env::var("COMPANION_KEYCHAIN_TEST_PHASE").expect("write/read/delete phase");
+        let binary = Entry::new("eu.companionstudio.test.content-key", &account).unwrap();
+        let api = Entry::new("eu.companionstudio.test.api-key", &account).unwrap();
+        match phase.as_str() {
+            "write" => {
+                binary.set_secret(&[7_u8; 32]).unwrap();
+                api.set_password("disposable-test-key").unwrap();
+            }
+            "read" => {
+                assert_eq!(binary.get_secret().unwrap(), vec![7_u8; 32]);
+                assert_eq!(api.get_password().unwrap(), "disposable-test-key");
+            }
+            "delete" => {
+                binary.delete_credential().unwrap();
+                api.delete_credential().unwrap();
+                assert!(matches!(binary.get_secret(), Err(Error::NoEntry)));
+                assert!(matches!(api.get_password(), Err(Error::NoEntry)));
+            }
+            _ => panic!("unknown Keychain test phase"),
+        }
+    }
     use super::*;
 
     fn database() -> Database { Database::open_with_key(Path::new(":memory:"), &[7_u8; 32]).unwrap() }

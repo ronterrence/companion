@@ -1,6 +1,8 @@
 mod storage;
+mod engine;
+mod local_model;
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use storage::{AuditEventInput, Database, MemoryInput, MessageInput, SessionInput};
 use tauri::Manager;
 
@@ -77,11 +79,21 @@ pub fn run() {
             let path = app.path().app_data_dir()?.join("companion-studio.sqlite3");
             std::fs::create_dir_all(path.parent().expect("database parent"))?;
             app.manage(Mutex::new(Database::open(&path)?));
+            app.manage(Arc::new(engine::Engine::new(app.path().app_local_data_dir()?, app.path().resource_dir()?.join("runtime")).map_err(std::io::Error::other)?));
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![save_companion, list_companions, save_session, save_message, list_messages, save_memory, list_memories, delete_memory, append_audit, list_audit_events])
-        .run(tauri::generate_context!())
-        .expect("error while running Companion Studio");
+        .invoke_handler(tauri::generate_handler![save_companion, list_companions, save_session, save_message, list_messages, save_memory, list_memories, delete_memory, append_audit, list_audit_events,
+            engine::get_engine_status, engine::select_engine, engine::configure_engine, engine::remove_api_key, engine::test_api,
+            engine::begin_chat, engine::authorize_chat, engine::end_chat, engine::complete_chat, engine::model_action])
+        .build(tauri::generate_context!())
+        .expect("error while building Companion Studio")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                let engine = app.state::<Arc<engine::Engine>>();
+                engine.local.cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+                engine.local.stop();
+            }
+        });
 }
 
 #[cfg(test)]

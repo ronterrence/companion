@@ -2,6 +2,7 @@ name: verify
 on:
   push:
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -17,8 +18,63 @@ jobs:
       - run: npm test
       - run: npm run build
   rust:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run prepare:runtime
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --manifest-path src-tauri/Cargo.toml
+      - run: npm run tauri build
+      - run: npm run build:website
+  macos:
+    name: Apple silicon preview
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - run: npm ci
+      - run: npm test
+      - run: npm run prepare:runtime
+      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+      - name: Verify Keychain persistence across processes
+        shell: bash
+        run: |
+          export COMPANION_KEYCHAIN_TEST_ACCOUNT="ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          for phase in write read delete; do
+            COMPANION_KEYCHAIN_TEST_PHASE="$phase" cargo test --locked --manifest-path src-tauri/Cargo.toml storage::tests::macos_keychain_integration -- --ignored --exact
+          done
+      - run: npm run tauri build -- --target aarch64-apple-darwin
+      - run: npm run verify:mac
+      - name: Test packaged runtime download, inference, stop, and restart
+        env:
+          # Hosted virtual machines may not expose Metal. Real GPU validation is manual.
+          COMPANION_TEST_CPU: '1'
+        shell: bash
+        run: |
+          export COMPANION_TEST_RUNTIME="$PWD/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Companion Studio.app/Contents/Resources/runtime"
+          cargo test --locked --manifest-path src-tauri/Cargo.toml managed_local_integration -- --ignored --nocapture
+      - name: Checksum installer
+        working-directory: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg
+        run: shasum -a 256 ./*.dmg > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Companion-Studio-macos-arm64-preview
+          path: |
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

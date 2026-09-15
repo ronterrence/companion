@@ -18,6 +18,9 @@ test-results/
 *.gguf
 *.partial
 models/
+src-tauri/runtime/
+website/downloads/
+website-dist/
 
 # Local databases
 *.sqlite3
