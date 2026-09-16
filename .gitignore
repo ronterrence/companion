@@ -19,7 +19,11 @@ test-results/
 *.partial
 models/
 src-tauri/runtime/
-website/downloads/
+website/downloads/*
+!website/downloads/SHA256SUMS.txt
+!website/downloads/Companion-Studio-0.3.0-x64-setup.exe
+!website/downloads/Companion-Studio-0.3.0-x64.msi
+!website/downloads/Companion-Studio-0.3.0_aarch64.dmg
 website-dist/
 
 # Local databases
