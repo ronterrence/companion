@@ -1,6 +1,8 @@
 mod storage;
 mod engine;
 mod local_model;
+mod providers;
+mod cloud;
 
 use std::sync::{Arc, Mutex};
 use storage::{AuditEventInput, Database, MemoryInput, MessageInput, SessionInput};
@@ -20,55 +22,59 @@ fn validate_companion_manifest(companion: &serde_json::Value) -> Result<&str, St
 }
 
 #[tauri::command]
-fn save_companion(db: tauri::State<'_, Mutex<Database>>, companion: serde_json::Value) -> Result<(), String> {
+fn save_companion(db: tauri::State<'_, Arc<Mutex<Database>>>, companion: serde_json::Value) -> Result<(), String> {
     let id = validate_companion_manifest(&companion)?.to_owned();
     db.lock().map_err(|_| "database lock poisoned".to_string())?.save_companion(&id, &companion).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn list_companions(db: tauri::State<'_, Mutex<Database>>) -> Result<Vec<serde_json::Value>, String> {
+fn list_companions(db: tauri::State<'_, Arc<Mutex<Database>>>) -> Result<Vec<serde_json::Value>, String> {
     let companions = db.lock().map_err(|_| "database lock poisoned".to_string())?.list_companions().map_err(|error| error.to_string())?;
     companions.into_iter().map(|companion| { validate_companion_manifest(&companion)?; Ok(companion) }).collect()
 }
 
 #[tauri::command]
-fn save_session(db: tauri::State<'_, Mutex<Database>>, session: SessionInput) -> Result<(), String> {
+fn save_session(db: tauri::State<'_, Arc<Mutex<Database>>>, session: SessionInput) -> Result<(), String> {
     db.lock().map_err(|_| "database lock poisoned".to_string())?.save_session(&session).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn save_message(db: tauri::State<'_, Mutex<Database>>, message: MessageInput) -> Result<(), String> {
+fn save_message(db: tauri::State<'_, Arc<Mutex<Database>>>, message: MessageInput) -> Result<(), String> {
     db.lock().map_err(|_| "database lock poisoned".to_string())?.save_message(&message).map_err(|e| e.to_string())
+}
+#[tauri::command]
+fn list_sessions(db:tauri::State<'_,Arc<Mutex<Database>>>)->Result<Vec<SessionInput>,String> {
+    db.lock().map_err(|_|"Database unavailable.")?.list_sessions().map_err(|_|"Could not load saved conversations.".into())
 }
 
 #[tauri::command]
-fn list_messages(db: tauri::State<'_, Mutex<Database>>, session_id: String) -> Result<Vec<MessageInput>, String> {
+fn list_messages(db: tauri::State<'_, Arc<Mutex<Database>>>, session_id: String) -> Result<Vec<MessageInput>, String> {
     db.lock().map_err(|_| "database lock poisoned".to_string())?.list_messages(&session_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn save_memory(db: tauri::State<'_, Mutex<Database>>, memory: MemoryInput, consent: bool) -> Result<(), String> {
+fn save_memory(db: tauri::State<'_, Arc<Mutex<Database>>>, memory: MemoryInput, consent: bool) -> Result<(), String> {
     if !consent { return Err("durable memory requires explicit consent".into()); }
     db.lock().map_err(|_| "database lock poisoned".to_string())?.save_memory(&memory).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn list_memories(db: tauri::State<'_, Mutex<Database>>, companion_id: String) -> Result<Vec<MemoryInput>, String> {
+fn list_memories(db: tauri::State<'_, Arc<Mutex<Database>>>, companion_id: String) -> Result<Vec<MemoryInput>, String> {
     db.lock().map_err(|_| "database lock poisoned".to_string())?.list_memories(&companion_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn delete_memory(db: tauri::State<'_, Mutex<Database>>, id: String) -> Result<(), String> {
+fn delete_memory(db: tauri::State<'_, Arc<Mutex<Database>>>, id: String) -> Result<(), String> {
     db.lock().map_err(|_| "database lock poisoned".to_string())?.delete_memory(&id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn append_audit(db: tauri::State<'_, Mutex<Database>>, event: AuditEventInput) -> Result<(), String> {
+fn append_audit(db: tauri::State<'_, Arc<Mutex<Database>>>, event: AuditEventInput) -> Result<(), String> {
     db.lock().map_err(|_| "database lock poisoned".to_string())?.append_audit(&event).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn list_audit_events(db: tauri::State<'_, Mutex<Database>>) -> Result<Vec<AuditEventInput>, String> {
+fn list_audit_events(db: tauri::State<'_, Arc<Mutex<Database>>>) -> Result<Vec<AuditEventInput>, String> {
     db.lock().map_err(|_| "database lock poisoned".to_string())?.list_audit_events().map_err(|e| e.to_string())
 }
 
@@ -78,13 +84,15 @@ pub fn run() {
         .setup(|app| {
             let path = app.path().app_data_dir()?.join("companion-studio.sqlite3");
             std::fs::create_dir_all(path.parent().expect("database parent"))?;
-            app.manage(Mutex::new(Database::open(&path)?));
+            app.manage(Arc::new(Mutex::new(Database::open(&path)?)));
             app.manage(Arc::new(engine::Engine::new(app.path().app_local_data_dir()?, app.path().resource_dir()?.join("runtime")).map_err(std::io::Error::other)?));
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![save_companion, list_companions, save_session, save_message, list_messages, save_memory, list_memories, delete_memory, append_audit, list_audit_events,
-            engine::get_engine_status, engine::select_engine, engine::configure_engine, engine::remove_api_key, engine::test_api,
-            engine::begin_chat, engine::authorize_chat, engine::end_chat, engine::complete_chat, engine::model_action])
+        .invoke_handler(tauri::generate_handler![save_companion, list_companions, save_session, list_sessions, save_message, list_messages, save_memory, list_memories, delete_memory, append_audit, list_audit_events,
+            engine::get_engine_status, engine::select_engine,
+            engine::begin_chat, engine::authorize_chat, engine::end_chat, engine::complete_chat, engine::model_action,
+            engine::save_provider_profile, engine::choose_provider_profile, engine::delete_provider_profile, engine::discover_provider_models,
+            cloud::run_provider_request, cloud::cancel_provider_request, cloud::provider_activity, cloud::get_provider_result, cloud::assess_chat_context, cloud::get_chat_context])
         .build(tauri::generate_context!())
         .expect("error while building Companion Studio")
         .run(|app, event| {

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { ProviderSetup } from './ProviderSetup';
+import { ProviderActivity } from './ProviderChatControls';
 import { configureEngine, engineError, getEngineStatus, modelAction, removeApiKey, selectEngine, testApi, type EngineStatus } from '../services/engine';
 
 export function EngineSetup({ status, onChange, onboarding = false }: { status: EngineStatus; onChange: (status: EngineStatus) => void; onboarding?: boolean }) {
@@ -38,7 +40,7 @@ export function EngineSetup({ status, onChange, onboarding = false }: { status: 
         </div>
         {confirmRemove && <div className="safety-notice"><p>Remove the model download from this computer? Conversations are kept.</p><button className="danger-btn" disabled={working} onClick={() => void run(async () => { await modelAction('remove'); setConfirmRemove(false); })}>Confirm removal</button><button className="ghost-btn" onClick={() => setConfirmRemove(false)}>Keep model</button></div>}
       </div>
-      <div className="card"><span className="badge">Your provider account</span><h2>Connect an API provider</h2>
+      {status.profiles ? <ProviderSetup status={status} onChange={onChange} /> : <div className="card"><span className="badge">Your provider account</span><h2>Connect an API provider</h2>
         <p>Use an OpenAI-compatible Chat Completions provider. Your provider receives the conversation when you authorize it and bills your account.</p>
         <p>Your key is stored in Windows Credential Manager. Companion Studio does not operate an AI relay.</p>
         {!showApi && <button className="secondary-btn" onClick={() => setShowApi(true)}>Connect an API provider</button>}
@@ -49,8 +51,9 @@ export function EngineSetup({ status, onChange, onboarding = false }: { status: 
           <button className="primary-btn section-gap" disabled={working} type="submit">Save API connection</button>
         </form>}
         {status.hasKey && <div className="section-gap"><p>Saved connection: {status.baseUrl} · {status.model}. Key stored securely.</p><p>Testing sends a short “Reply with OK” prompt and may incur a small provider charge.</p><div className="actions"><button className="secondary-btn" disabled={working} onClick={() => void run(testApi, 'Connection test succeeded.')}>Test connection (may cost)</button><button className="primary-btn" disabled={working} onClick={() => void run(() => selectEngine('api'), 'API provider selected.')}>Use API provider</button><button className="danger-btn" disabled={working} onClick={() => void run(removeApiKey, 'API key removed.')}>Remove API key</button></div></div>}
-      </div>
+      </div>}
     </div>
+    {status.profiles && <ProviderActivity />}
     {message && <p className="safety-notice" role="alert">{message}</p>}
     <button className="ghost-btn section-gap" disabled={working} onClick={() => void run(() => selectEngine('prototype'))}>{onboarding ? 'Skip for now' : 'Use prototype replies'}</button>
     <p className="muted">Prototype mode uses example replies, not a connected AI model.</p>

@@ -6,8 +6,9 @@
 .consent-row { display: flex; gap: .6rem; align-items: flex-start; margin: .8rem 0; }
 .memory-list { padding: 0; list-style: none; }
 .memory-list li { display: flex; justify-content: space-between; gap: 1rem; align-items: center; padding: .6rem 0; border-top: 1px solid #ddd; }
-.file-button { display: inline-block; cursor: pointer; }
-.file-button input { position: absolute; opacity: 0; pointer-events: none; }
+.file-button { display: inline-block; cursor: pointer; position: relative; }
+.file-button input { position: absolute; width: 1px; height: 1px; padding: 0; opacity: 0; pointer-events: none; }
+.consent-row input[type="checkbox"] { width: auto; flex: 0 0 auto; }
 .engine-setup { padding: 1.5rem 0 2.5rem; }
 .engine-setup h1 { max-width: 760px; }
 .engine-setup .grid { align-items: start; margin-top: 1.5rem; }
@@ -19,4 +20,18 @@
 .engine-setup summary { cursor: pointer; font-weight: 650; }
 .api-consent { margin: 1rem; background: #f0f6f3; }
 .muted { color: #59665f; font-size: .9rem; }
+.connection-list { list-style: none; padding: 0; }
+.connection-list li { padding: 1rem 0; border-bottom: 1px solid #dce4df; overflow-wrap: anywhere; }
+.provider-controls { padding: 1rem; border-bottom: 1px solid #dce4df; }
+.provider-controls fieldset, .provider-setup fieldset { border: 1px solid #b8c6be; border-radius: 8px; padding: 1rem; min-width: 0; }
+.provider-controls select, .provider-setup select { width: 100%; padding: .7rem; border: 1px solid #8b9e92; border-radius: 8px; font: inherit; background: white; color: #17352b; box-sizing: border-box; }
+.provider-controls .grid { gap: .8rem; }
+.provider-controls label { display: block; margin-bottom: .4rem; }
+.provider-controls button { margin-right: .5rem; }
+.activity-table { overflow-x: auto; margin-top: 1rem; }
+.activity-table table { width: 100%; border-collapse: collapse; text-align: left; }
+.activity-table th, .activity-table td { padding: .7rem; border-bottom: 1px solid #dce4df; vertical-align: top; }
+.activity-table caption { text-align: left; margin-bottom: .5rem; }
+.chat-window > .actions { flex-wrap: wrap; padding: 0 1rem; }
+.chat-window > .muted { padding: 0 1rem; }
 @media (max-width: 760px) { .engine-setup .grid.two { grid-template-columns: 1fr; } }

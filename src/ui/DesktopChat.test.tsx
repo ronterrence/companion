@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import * as engine from '../services/engine';
-vi.mock('../services/engine', () => ({ isDesktop: () => true, getEngineStatus: vi.fn(), beginChat: vi.fn(), completeChat: vi.fn(), authorizeChat: vi.fn(), endChat: vi.fn(), engineError: (e: unknown) => String(e) }));
+vi.mock('../services/engine', () => ({ defaultPreferences: { length: 'standard', thinking: 'balanced' }, isDesktop: () => true, getEngineStatus: vi.fn(), beginChat: vi.fn(), completeChat: vi.fn(), authorizeChat: vi.fn(), endChat: vi.fn(), engineError: (e: unknown) => String(e) }));
 const status: engine.EngineStatus = { setupComplete: true, engine: 'api', baseUrl: 'https://example.com/v1', model: 'test-model', hasKey: true, local: { state: 'not-installed', downloaded: 0, total: 428970080, installed: false, error: null, availableRam: null }, catalog: { name: 'Qwen3 basic', license: 'Apache-2.0', licenseUrl: 'https://example.com/license', revision: 'pinned', size: 428970080, runtime: 'llama.cpp' } };
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(engine.getEngineStatus).mockResolvedValue(status); vi.mocked(engine.completeChat).mockResolvedValue({ content: 'A helpful response.', provider: 'cloud', blocked: false }); });
 async function start() {

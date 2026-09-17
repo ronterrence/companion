@@ -4,6 +4,7 @@ export interface Repository {
   saveCompanion(companion: CompanionManifest): Promise<void>;
   listCompanions(): Promise<CompanionManifest[]>;
   saveSession(session: Session): Promise<void>;
+  listSessions(): Promise<Session[]>;
   saveMessage(message: Message): Promise<void>;
   listMessages(sessionId: string): Promise<Message[]>;
   saveMemory(memory: MemoryRecord, consent: boolean): Promise<void>;
@@ -20,6 +21,7 @@ interface StoredData {
 const emptyData = (): StoredData => ({ companions: [], sessions: [], messages: [], memories: [], auditEvents: [] });
 
 export class BrowserRepository implements Repository {
+  async listSessions() { return [...this.data.sessions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
   private data: StoredData;
   constructor(private storage?: Storage) {
     const raw = storage?.getItem('companion-studio');
@@ -42,6 +44,7 @@ export class BrowserRepository implements Repository {
 }
 
 export class NativeRepository implements Repository {
+  async listSessions() { return this.invoke<Session[]>('list_sessions', {}); }
   private async invoke<T>(command: string, args: Record<string, unknown>): Promise<T> {
     const { invoke } = await import('@tauri-apps/api/core');
     return invoke<T>(command, args);
