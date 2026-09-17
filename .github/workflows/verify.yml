@@ -17,6 +17,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: npm run test:release
+      - run: npm run verify:downloads
   rust:
     runs-on: windows-latest
     steps:
@@ -30,6 +32,29 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --manifest-path src-tauri/Cargo.toml
       - run: npm run tauri build
+      - name: Verify Windows installer contents
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows.ps1
+      - name: Prepare Windows artifact
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $destination = 'src-tauri/target/windows-artifact'
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          Copy-Item -LiteralPath "src-tauri/target/release/bundle/nsis/Companion Studio_${version}_x64-setup.exe","src-tauri/target/release/bundle/msi/Companion Studio_${version}_x64_en-US.msi" -Destination $destination
+          Get-ChildItem -LiteralPath $destination -File | Sort-Object Name | ForEach-Object { $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower(); "$hash  $($_.Name)" } | Set-Content -LiteralPath "$destination/SHA256SUMS.txt" -Encoding utf8
+          @"
+          product=Companion Studio
+          version=$version
+          source_commit=$env:GITHUB_SHA
+          workflow_run=$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
+          workflow_run_attempt=$env:GITHUB_RUN_ATTEMPT
+          "@ | Set-Content -LiteralPath "$destination/BUILD-INFO.txt" -Encoding utf8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Companion-Studio-0.4.0-windows-x64-preview
+          path: src-tauri/target/windows-artifact/*
+          if-no-files-found: error
+          retention-days: 14
   macos:
     name: Apple silicon preview
     runs-on: macos-14

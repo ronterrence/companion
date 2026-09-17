@@ -6,6 +6,7 @@ export default defineConfig({
   clearScreen: false,
   server: { strictPort: true, port: 1420 },
   test: {
+    include: ['src/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     coverage: { provider: 'v8', reporter: ['text', 'html'] },

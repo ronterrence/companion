@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { version } from '../../package.json';
 import { companions } from '../domain/companions';
 import { goals, type Goal } from '../domain/goals';
 import { evaluateInput, evaluateOutput, validateManifest } from '../domain/policy';
@@ -337,6 +338,6 @@ export default function App() {
         <div className="card"><h3>Encrypted portability</h3><label htmlFor="transfer-passphrase">Export/import passphrase</label><input id="transfer-passphrase" type="password" minLength={12} value={passphrase} onChange={(event) => setPassphrase(event.target.value)} /><div className="actions"><button className="secondary-btn" onClick={() => void exportSelectedCompanion()}>Export selected companion</button><label className="secondary-btn file-button">Import companion<input type="file" accept="application/json" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importCompanion(file); }} /></label></div>{transferNotice && <p role="status">{transferNotice}</p>}</div>
       </div></section>}
     </main>
-    <footer>Preview v0.3 · Local-first AI with enforceable boundaries</footer>
+    <footer>Preview v{version} · Local-first AI with enforceable boundaries</footer>
   </div>;
 }

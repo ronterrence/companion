@@ -35,7 +35,7 @@ Windows also needs WebView2; setup may download it if missing. The locally built
 
 ## Use on an Apple silicon MacBook
 
-The Mac preview targets M-series MacBooks running macOS 13 or newer. Designated testers can open a successful 0.4.0 Mac run in this repository's **Actions → verify** and download **Companion-Studio-0.4.0-macos-arm64-preview**. Extract the ZIP, verify `SHA256SUMS.txt`, inspect `BUILD-INFO.txt`, open the DMG, and drag **Companion Studio** into **Applications**. Artifacts are retained for 14 days. Every CI artifact is an unqualified candidate; sharing beyond designated testers requires all workflow jobs and real-Mac checks to pass in a separate [qualification record](docs/macos-qualification-template.md) tied to that exact DMG checksum and workflow attempt. Preserve the original build metadata unchanged. Live provider qualification is tracked separately.
+The Mac 0.4.0 preview targets M-series MacBooks running macOS 13 or newer. It may be published on the download website as an **unqualified preview** after all automated release checks pass. Real-Mac installation, Metal acceleration, upgrade behavior, installed-app Keychain access, and live-provider qualification remain pending. The website links its checksum and original build metadata. Verify those before opening the DMG and dragging **Companion Studio** into **Applications**. The matching **Companion-Studio-0.4.0-macos-arm64-preview** Actions artifact is also retained for 14 days. Publishing does not change its `awaiting_hardware_verification` status.
 
 This personal preview is ad-hoc signed, without Apple notarization. If macOS blocks the first launch, open **System Settings → Privacy & Security → Open Anyway** for Companion Studio after attempting to open it. Do not disable Gatekeeper globally. See [Apple's instructions](https://support.apple.com/en-us/102445).
 
@@ -43,7 +43,7 @@ Choose **Download a local model** for the same 429 MB model, or connect a provid
 
 ## Development commands
 
-The working source includes multi-provider chat with separate OpenAI, Anthropic Claude, DeepSeek and Custom connections, reply/thinking presets, explicit retry/continue/stop, encrypted summaries, saved conversations and local usage estimates. See the [provider chat PRD](docs/provider-chat-prd.md) and [implementation/qualification notes](docs/provider-chat.md). Existing published installers do not yet include these changes. Live provider qualification and a newly versioned Windows installer remain release gates.
+Version 0.4.0 includes multi-provider chat with separate OpenAI, Anthropic Claude, DeepSeek and Custom connections, reply/thinking presets, explicit retry/continue/stop, encrypted summaries, saved conversations and local usage estimates. Live provider qualification remains pending. See the [release procedure](docs/publishing.md) for packaging, publication, and verification.
 
 ```powershell
 npm install
@@ -65,14 +65,14 @@ npm run tauri build -- --debug
 
 ## Website and release artifacts
 
-After building the Windows installers:
+Pushing source does not replace downloads: Vercel serves the files committed under `website/`. First follow the [release procedure](docs/publishing.md) to promote verified Windows and Mac artifacts from the same successful Actions run. Then review the prepared website:
 
 ```powershell
 npm run build:website
 npm run preview:website
 ```
 
-The static website is prepared under `website-dist/` from its committed public downloads, checksums, and screenshots. It is independent of the installers built on the current machine. Open `http://127.0.0.1:1421` for local review. Nothing is uploaded. Update public assets only as a separate release action.
+The static website is prepared under `website-dist/` from its committed public downloads, checksums, and screenshots. Open `http://127.0.0.1:1421` for local review. `npm run build:website` verifies downloads but never promotes new installers. Commit and push the prepared website assets to publish them through Vercel.
 
 The included setup screenshot was captured from the packaged app's WebView. `scripts/capture-screenshots.mjs` can also capture the React screens against the local development server using a deterministic unconfigured native-bridge fixture. Neither capture path calls a provider or downloads a model.
 

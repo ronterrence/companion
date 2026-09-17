@@ -1,6 +1,8 @@
 import { cp, mkdir, access } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { verifyDownloads } from './verify-downloads.mjs';
 const root = resolve(import.meta.dirname, '..');
+console.log(await verifyDownloads(resolve(root, 'website')));
 for (const name of ['home.png', 'setup.png']) await access(resolve(root, 'website/screenshots', name));
 const output = resolve(root, 'website-dist');
 await mkdir(output, { recursive: true });
