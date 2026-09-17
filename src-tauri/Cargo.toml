@@ -1,6 +1,6 @@
 [package]
 name = "companion-studio"
-version = "0.3.0"
+version = "0.4.0"
 description = "Local-first governed AI companions"
 edition = "2021"
 
@@ -26,6 +26,7 @@ reqwest = { version = "0.12", default-features = false, features = ["blocking", 
 sha2 = "0.10"
 regex = "1"
 fs2 = "0.4"
+tokio = { version = "1", features = ["rt", "time", "macros", "sync"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_Security", "Win32_System_SystemInformation"] }

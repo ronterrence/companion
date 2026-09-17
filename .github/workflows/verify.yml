@@ -30,7 +30,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --manifest-path src-tauri/Cargo.toml
       - run: npm run tauri build
-      - run: npm run build:website
   macos:
     name: Apple silicon preview
     runs-on: macos-14
@@ -70,11 +69,26 @@ jobs:
       - name: Checksum installer
         working-directory: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg
         run: shasum -a 256 ./*.dmg > SHA256SUMS.txt
+      - name: Record preview build metadata
+        working-directory: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg
+        shell: bash
+        run: |
+          cat > BUILD-INFO.txt <<EOF
+          product=Companion Studio
+          version=0.4.0
+          source_commit=$GITHUB_SHA
+          workflow_run=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          workflow_run_attempt=$GITHUB_RUN_ATTEMPT
+          qualification_status=awaiting_hardware_verification
+          EOF
+      - name: Verify candidate DMG, checksum, metadata, and enclosed app
+        run: npm run verify:mac -- --artifact
       - uses: actions/upload-artifact@v4
         with:
-          name: Companion-Studio-macos-arm64-preview
+          name: Companion-Studio-0.4.0-macos-arm64-preview
           path: |
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/SHA256SUMS.txt
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/BUILD-INFO.txt
           if-no-files-found: error
           retention-days: 14

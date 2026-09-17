@@ -74,7 +74,7 @@ pub struct Database { connection: Connection, cipher: ContentCipher }
 #[serde(rename_all = "camelCase")]
 pub struct SessionInput { pub id: String, pub companion_id: String, pub created_at: String, pub execution_mode: String, pub memory_mode: String }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageInput { pub id: String, pub session_id: String, pub role: String, pub content: String, pub created_at: String, pub provider: String }
 
@@ -92,7 +92,7 @@ impl Database {
         Self::open_with_key(path, &key)
     }
 
-    fn open_with_key(path: &Path, key: &[u8]) -> Result<Self, StorageError> {
+    pub(crate) fn open_with_key(path: &Path, key: &[u8]) -> Result<Self, StorageError> {
         let connection = Connection::open(path)?;
         connection.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;
           CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, companion_id TEXT NOT NULL, created_at TEXT NOT NULL, execution_mode TEXT NOT NULL, memory_mode TEXT NOT NULL);
@@ -100,6 +100,7 @@ impl Database {
           CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY, session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE, role TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL, provider TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS memories(id TEXT PRIMARY KEY, companion_id TEXT NOT NULL, content TEXT NOT NULL, purpose TEXT NOT NULL, source_session_id TEXT NOT NULL, consented_at TEXT NOT NULL, expires_at TEXT);
           CREATE TABLE IF NOT EXISTS audit_events(id TEXT PRIMARY KEY, event_type TEXT NOT NULL, created_at TEXT NOT NULL, policy_version TEXT NOT NULL, metadata_json TEXT NOT NULL);")?;
+        connection.execute_batch("CREATE TABLE IF NOT EXISTS provider_records(kind TEXT NOT NULL,id TEXT NOT NULL,payload TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(kind,id));")?;
         let mut database = Self { connection, cipher: ContentCipher::new(key)? };
         database.migrate_plaintext_content()?;
         Ok(database)
@@ -140,6 +141,38 @@ impl Database {
 
     pub fn save_session(&self, value: &SessionInput) -> Result<(), StorageError> {
         self.connection.execute("INSERT INTO sessions VALUES (?1,?2,?3,?4,?5)", params![value.id,value.companion_id,value.created_at,value.execution_mode,value.memory_mode])?; Ok(())
+    }
+    pub fn list_sessions(&self)->Result<Vec<SessionInput>,StorageError> {
+        let mut statement=self.connection.prepare("SELECT id,companion_id,created_at,execution_mode,memory_mode FROM sessions ORDER BY created_at DESC")?;
+        let rows=statement.query_map([],|r|Ok(SessionInput {id:r.get(0)?,companion_id:r.get(1)?,created_at:r.get(2)?,execution_mode:r.get(3)?,memory_mode:r.get(4)?}))?.collect::<Result<_,_>>()?;Ok(rows)
+    }
+    pub fn put_provider_record(&self,kind:&str,id:&str,value:&serde_json::Value)->Result<(),StorageError> {
+        let encrypted=self.cipher.encrypt(&value.to_string(),&format!("provider:{kind}:{id}"))?;
+        self.connection.execute("INSERT INTO provider_records(kind,id,payload,updated_at) VALUES (?1,?2,?3,datetime('now')) ON CONFLICT(kind,id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at",params![kind,id,encrypted])?;Ok(())
+    }
+    pub fn provider_record(&self,kind:&str,id:&str)->Result<Option<serde_json::Value>,StorageError> {
+        use rusqlite::OptionalExtension;
+        let value:Option<String>=self.connection.query_row("SELECT payload FROM provider_records WHERE kind=?1 AND id=?2",params![kind,id],|row|row.get(0)).optional()?;
+        value.map(|encrypted|Ok(serde_json::from_str(&self.cipher.decrypt(&encrypted,&format!("provider:{kind}:{id}"))?)?)).transpose()
+    }
+    pub fn provider_records(&self,kind:&str)->Result<Vec<serde_json::Value>,StorageError> {
+        let mut statement=self.connection.prepare("SELECT id,payload FROM provider_records WHERE kind=?1 ORDER BY updated_at,id")?;
+        let rows:Vec<(String,String)>=statement.query_map([kind],|row|Ok((row.get(0)?,row.get(1)?)))?.collect::<Result<_,_>>()?;
+        rows.into_iter().map(|(id,value)|Ok(serde_json::from_str(&self.cipher.decrypt(&value,&format!("provider:{kind}:{id}"))?)?)).collect()
+    }
+    pub fn finish_provider_request(&self,id:&str,outcome:&serde_json::Value,message:Option<&MessageInput>,context:Option<(&str,&serde_json::Value)>)->Result<(),StorageError> {
+        let transaction=self.connection.unchecked_transaction()?;
+        let payload=self.cipher.encrypt(&outcome.to_string(),&format!("provider:request:{id}"))?;
+        transaction.execute("UPDATE provider_records SET payload=?1,updated_at=datetime('now') WHERE kind='request' AND id=?2",params![payload,id])?;
+        if let Some(message)=message {
+            let content=self.cipher.encrypt(&message.content,&format!("message:{}",message.id))?;
+            transaction.execute("INSERT INTO messages(id,session_id,role,content,created_at,provider) VALUES (?1,?2,?3,?4,?5,?6)",params![message.id,message.session_id,message.role,content,message.created_at,message.provider])?;
+        }
+        if let Some((session,value))=context {
+            let encrypted=self.cipher.encrypt(&value.to_string(),&format!("provider:context:{session}"))?;
+            transaction.execute("INSERT INTO provider_records(kind,id,payload,updated_at) VALUES ('context',?1,?2,datetime('now')) ON CONFLICT(kind,id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at",params![session,encrypted])?;
+        }
+        transaction.commit()?;Ok(())
     }
     pub fn save_companion(&self, id: &str, manifest: &serde_json::Value) -> Result<(), StorageError> {
         let serialized = serde_json::to_string(manifest)?;
@@ -279,5 +312,19 @@ mod tests {
         assert!(db.list_memories("other").unwrap().is_empty());
         db.delete_memory("m1").unwrap();
         assert!(db.list_memories("c1").unwrap().is_empty());
+    }
+    #[test]
+    fn provider_records_are_encrypted_and_completion_is_atomic() {
+        let db=database();
+        db.save_session(&SessionInput {id:"s".into(),companion_id:"c".into(),created_at:"now".into(),execution_mode:"cloud".into(),memory_mode:"session".into()}).unwrap();
+        let pending=serde_json::json!({"status":"interrupted"});db.put_provider_record("request","r",&pending).unwrap();
+        let outcome=serde_json::json!({"content":"private answer","usage":{"input":10}});
+        let summary=serde_json::json!({"summary":"private summary","covered":2});
+        let mut message=MessageInput {id:"reply-r".into(),session_id:"missing".into(),role:"assistant".into(),content:"private answer".into(),created_at:"now".into(),provider:"cloud".into()};
+        assert!(db.finish_provider_request("r",&outcome,Some(&message),Some(("s",&summary))).is_err());assert_eq!(db.provider_record("request","r").unwrap(),Some(pending));assert!(db.provider_record("context","s").unwrap().is_none());
+        message.session_id="s".into();db.finish_provider_request("r",&outcome,Some(&message),Some(("s",&summary))).unwrap();
+        assert_eq!(db.list_messages("s").unwrap(),vec![message]);assert_eq!(db.provider_record("context","s").unwrap(),Some(summary));
+        let stored:String=db.connection.query_row("SELECT payload FROM provider_records WHERE kind='context'",[],|r|r.get(0)).unwrap();assert!(stored.starts_with(ENCRYPTED_PREFIX));assert!(!stored.contains("private"));
+        db.connection.execute("UPDATE provider_records SET payload=?1 WHERE kind='request'",[stored]).unwrap();assert!(db.provider_record("request","r").is_err());
     }
 }

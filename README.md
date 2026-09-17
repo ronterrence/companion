@@ -27,7 +27,7 @@ On first launch, choose **Download a local model** or **Connect an API provider*
 
 The local option downloads the pinned Qwen3-0.6B Q4_0 model (429 MB). The installer includes llama.cpp; the app starts and stops it automatically. Local chat works offline after setup. Minimum physical RAM is 4 GB, with 8 GB recommended. This is a basic model, not a substitute for larger models or professional advice.
 
-The API option accepts an HTTPS base URL, a model identifier, and your provider's API key. It supports OpenAI-compatible Chat Completions APIs. Windows Credential Manager stores the key, and Rust sends requests directly to your provider. The connection test sends a short test prompt and may cost money. Your provider bills all API usage.
+The API option supports separate OpenAI, Anthropic Claude, DeepSeek, and custom OpenAI-compatible connections. Each profile stores its key in the operating system's secure credential store, and Rust sends requests directly to that provider. The connection test sends a short test prompt and may cost money. Your provider bills all API usage.
 
 Built-in and new companions request API permission once per chat. Existing imported companions retain their stricter policy. Permission ends on chat end, app restart, connection change, or revocation. Potentially sensitive outbound context is blocked; this heuristic can miss information. Use local mode for private conversations. No cloud fallback occurs automatically.
 
@@ -35,13 +35,15 @@ Windows also needs WebView2; setup may download it if missing. The locally built
 
 ## Use on an Apple silicon MacBook
 
-The Mac preview targets M-series MacBooks running macOS 13 or newer. In this repository's **Actions → verify**, open a successful run containing the Mac changes (or select **Run workflow** once they are on the default branch). Download **Companion-Studio-macos-arm64-preview** from the run's artifacts. Extract the ZIP, open the DMG, and drag **Companion Studio** into **Applications**. Artifacts are retained for 14 days; run the workflow again if expired.
+The Mac preview targets M-series MacBooks running macOS 13 or newer. Designated testers can open a successful 0.4.0 Mac run in this repository's **Actions → verify** and download **Companion-Studio-0.4.0-macos-arm64-preview**. Extract the ZIP, verify `SHA256SUMS.txt`, inspect `BUILD-INFO.txt`, open the DMG, and drag **Companion Studio** into **Applications**. Artifacts are retained for 14 days. Every CI artifact is an unqualified candidate; sharing beyond designated testers requires all workflow jobs and real-Mac checks to pass in a separate [qualification record](docs/macos-qualification-template.md) tied to that exact DMG checksum and workflow attempt. Preserve the original build metadata unchanged. Live provider qualification is tracked separately.
 
 This personal preview is ad-hoc signed, without Apple notarization. If macOS blocks the first launch, open **System Settings → Privacy & Security → Open Anyway** for Companion Studio after attempting to open it. Do not disable Gatekeeper globally. See [Apple's instructions](https://support.apple.com/en-us/102445).
 
-Choose **Download a local model** for the same 429 MB model, or connect an API provider. After the model download, local chat works offline. The Mac runtime enables Metal acceleration; API credentials and the database encryption key use macOS Keychain. Preview qualification and local build instructions are in [the Mac preview guide](docs/macos-preview.md).
+Choose **Download a local model** for the same 429 MB model, or connect a provider profile. Provider chats include consent, reply-length and thinking controls, retry/continue/stop, saved conversations, and encrypted summaries. After the model download, local chat works offline. The Mac runtime enables Metal acceleration; API credentials and the database encryption key use macOS Keychain. Preview qualification and local build instructions are in [the Mac preview guide](docs/macos-preview.md).
 
 ## Development commands
+
+The working source includes multi-provider chat with separate OpenAI, Anthropic Claude, DeepSeek and Custom connections, reply/thinking presets, explicit retry/continue/stop, encrypted summaries, saved conversations and local usage estimates. See the [provider chat PRD](docs/provider-chat-prd.md) and [implementation/qualification notes](docs/provider-chat.md). Existing published installers do not yet include these changes. Live provider qualification and a newly versioned Windows installer remain release gates.
 
 ```powershell
 npm install
@@ -70,7 +72,7 @@ npm run build:website
 npm run preview:website
 ```
 
-The static website is prepared under `website-dist/` with versioned EXE/MSI downloads, SHA-256 checksums, and app screenshots. Open `http://127.0.0.1:1421` for local review. Nothing is uploaded. Deploy the entire directory when a hosting destination is chosen.
+The static website is prepared under `website-dist/` from its committed public downloads, checksums, and screenshots. It is independent of the installers built on the current machine. Open `http://127.0.0.1:1421` for local review. Nothing is uploaded. Update public assets only as a separate release action.
 
 The included setup screenshot was captured from the packaged app's WebView. `scripts/capture-screenshots.mjs` can also capture the React screens against the local development server using a deterministic unconfigured native-bridge fixture. Neither capture path calls a provider or downloads a model.
 

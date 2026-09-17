@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { companions } from '../domain/companions';
 import { goals, type Goal } from '../domain/goals';
 import { evaluateInput, evaluateOutput, validateManifest } from '../domain/policy';
-import type { CompanionManifest, MemoryRecord, Message, RuntimeStatus } from '../domain/types';
+import type { CompanionManifest, MemoryRecord, Message, RuntimeStatus, Session } from '../domain/types';
 import { createRepository } from '../services/repository';
 import { LlamaCppProvider, PrototypeProvider, type ModelProvider } from '../services/model';
 import { EngineSetup } from './EngineSetup';
+import { ProviderChatControls } from './ProviderChatControls';
+import { cancelProviderRequest, chooseProviderProfile, defaultPreferences, getChatContext, getProviderResult, providerActivity, runProviderRequest, saveProviderProfile, selectEngine, type Preferences, type ProviderAction, type ProviderReply } from '../services/engine';
 import { classifyRouteRequest } from '../domain/router';
 import { authorizeChat, beginChat, completeChat, endChat, engineError, getEngineStatus, isDesktop, type EngineStatus } from '../services/engine';
 import { decryptExport, encryptExport, type EncryptedEnvelope } from '../services/cryptoExport';
@@ -25,6 +27,12 @@ export default function App() {
   const [input, setInput] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
+  const [lastReply, setLastReply] = useState<ProviderReply | null>(null);
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const requestInFlight = useRef(false);
+  const [contextRevision, setContextRevision] = useState(0);
+  const [savedSessions, setSavedSessions] = useState<Session[]>([]);
   const [engine, setEngine] = useState<EngineStatus | null>(null);
   const [engineLoadError, setEngineLoadError] = useState('');
   const desktop = isDesktop();
@@ -56,6 +64,38 @@ export default function App() {
       setAvailableCompanions((current) => [...current.filter((item) => !valid.some((saved) => saved.id === item.id)), ...valid]);
     });
   }, [repository]);
+  useEffect(() => {
+    if (screen === 'library') void repository.listSessions().then(setSavedSessions).catch(() => setNotice('Saved conversations could not be loaded.'));
+  }, [repository, screen]);
+
+  async function reopenSession(saved: Session) {
+    if (busy) return;
+    const selected = availableCompanions.find(c => c.id === saved.companionId);
+    if (!selected) { setNotice('The companion for this conversation is unavailable.'); return; }
+    setBusy(true); setNotice('');
+    try {
+      if (desktop && sessionId) await endChat(sessionId);
+      let nextEngine = engine;
+      if (desktop && engine?.profiles) {
+        const context = await getChatContext(saved.id);
+        setPreferences(context.preferences);
+        const savedProfile = engine.profiles.find(p => p.id === context.profileId);
+        if (saved.executionMode === 'cloud' && savedProfile) {
+          if (context.model && context.model !== savedProfile.model) await saveProviderProfile({ ...savedProfile, model: context.model, limits: context.limits });
+          await chooseProviderProfile(savedProfile.id);
+        }
+        else await selectEngine('prototype');
+        nextEngine = await getEngineStatus(); engineChanged(nextEngine);
+        const activity = await providerActivity();
+        const last = activity.filter(r => r.sessionId === saved.id && r.action !== 'summarize' && r.action !== 'test').at(-1);
+        setLastReply(last ? (await getProviderResult(last.id))?.reply ?? null : null);
+      } else setLastReply(null);
+      if (desktop) await beginChat(saved.id, selected);
+      setCompanion(selected); setSessionId(saved.id); setMessages(await repository.listMessages(saved.id));setActiveChat(true);setInput('');setScreen('chat');setContextRevision(v => v + 1);
+      setStatus(current => ({ ...current, executionMode: nextEngine?.engine === 'api' ? 'cloud' : 'local', cloudPermission: 'none', safetyPolicyVersion: selected.policyVersion }));
+      setNotice(saved.executionMode === 'cloud' && nextEngine?.engine === 'api' ? 'Conversation restored. Authorize the selected provider before sending more messages.' : 'Conversation restored. Select a model in Settings before continuing.');
+    } catch (e) { setNotice(engineError(e)); } finally { setBusy(false); }
+  }
 
   function review(selected: CompanionManifest) {
     setCompanion(selected);
@@ -96,6 +136,7 @@ export default function App() {
     await repository.saveSession({ id: nextSessionId, companionId: companion.id, createdAt: new Date().toISOString(), executionMode: engine?.engine === 'api' ? 'cloud' : 'local', memoryMode: 'session' });
     await repository.saveMessage(opening);
     setSessionId(nextSessionId); setActiveChat(true); setMessages([opening]); setInput(''); setNotice(''); setStatus((current) => ({ ...current, executionMode: engine?.engine === 'api' ? 'cloud' : 'local', cloudPermission: 'none', localProviderAvailable: localAvailable })); setScreen('chat');
+    setPreferences(defaultPreferences); setLastReply(null); setContextRevision(0);
     } catch (error) { setNotice(engineError(error)); }
     finally { setBusy(false); }
   }
@@ -112,6 +153,7 @@ export default function App() {
     if (decision.action === 'support') {
       setNotice('You may be in immediate danger. Contact local emergency services or a trusted person now. This AI is not crisis care.');
     } else setNotice('');
+    if (desktop && engine?.engine === 'api' && engine.profiles) { await sendProviderMessage('send'); return; }
     const userMessage: Message = { id: id(), sessionId, role: 'user', content, createdAt: new Date().toISOString(), provider: 'prototype' };
     setBusy(true);
     const nextMessages = [...messages, userMessage];
@@ -136,6 +178,27 @@ export default function App() {
       await repository.saveMessage(userMessage); await repository.saveMessage(response); setInput(''); setMessages([...nextMessages, response]);
     } catch (error) { setNotice(engineError(error)); }
     finally { setBusy(false); if (desktop && engine?.engine === 'api' && companion.cloudPolicy === 'ask-every-time') setStatus((current) => ({ ...current, cloudPermission: 'none' })); }
+  }
+
+  async function sendProviderMessage(action: ProviderAction) {
+    if (requestInFlight.current || busy) return;
+    if (status.cloudPermission === 'none') { setNotice('Review and authorize API processing below before sending.'); return; }
+    requestInFlight.current = true; setBusy(true); setNotice('');
+    const request = id(); setRequestId(request);
+    const submitted = input.trim();
+    const message: Message | undefined = action === 'send' ? { id: id(), sessionId, role: 'user', content: submitted, createdAt: new Date().toISOString(), provider: 'prototype' } : undefined;
+    try {
+      const result = await runProviderRequest({ id: request, sessionId, action, preferences, message, profileId: engine?.selectedProfile ?? undefined, expectedModel: engine?.model ?? undefined });
+      setLastReply(action === 'summarize' ? null : result.reply);
+      setNotice(result.reply.message ?? (action === 'summarize' && result.reply.status === 'complete' ? 'Older messages summarized. Your full transcript remains stored locally.' : ''));
+      if (action === 'summarize') { const context = await getChatContext(sessionId); setPreferences(context.preferences); }
+    } catch (error) { setNotice(engineError(error)); }
+    finally {
+      try { const stored = await repository.listMessages(sessionId); setMessages(stored); if (message && stored.some(m => m.id === message.id)) setInput(''); }
+      catch { setNotice('Could not reload the saved conversation. Check provider activity before retrying.'); }
+      setContextRevision(v => v + 1); setBusy(false); setRequestId(null); requestInFlight.current = false;
+      if (companion.cloudPolicy === 'ask-every-time') setStatus(current => ({ ...current, cloudPermission: 'none' }));
+    }
   }
 
   async function finishSession() {
@@ -178,7 +241,7 @@ export default function App() {
 
   async function toggleCloudPermission() {
     const permission = status.cloudPermission === 'none' ? desktop && companion.cloudPolicy === 'ask-per-session' ? 'session' : 'once' : 'none';
-    if (desktop) { try { await authorizeChat(sessionId, permission !== 'none'); } catch (error) { setNotice(engineError(error)); return; } }
+    if (desktop) { try { if (engine?.profiles) await authorizeChat(sessionId, permission !== 'none', engine.selectedProfile ?? undefined, engine.model ?? undefined); else await authorizeChat(sessionId, permission !== 'none'); } catch (error) { setNotice(engineError(error)); return; } }
     setStatus((current) => ({ ...current, cloudPermission: permission }));
     await repository.appendAudit({ id: id(), type: permission !== 'none' ? 'cloud.permission.granted' : 'cloud.permission.revoked', createdAt: new Date().toISOString(), policyVersion: companion.policyVersion, metadata: { scope: permission } });
   }
@@ -239,14 +302,21 @@ export default function App() {
       </section>}
       {screen === 'chat' && <section className="screen active"><div className="card chat-window">
         <div className="chat-header"><div><h2>{companion.name}</h2><small>{desktop ? engine?.engine === 'api' ? `API provider: ${engine.model}` : engine?.engine === 'local' ? `Local model: ${engine.local.state}` : 'Prototype fallback - no model connected' : status.localProviderAvailable ? 'Local model connected' : 'Prototype fallback — no model connected'}</small></div><button className="ghost-btn" disabled={busy} onClick={() => void finishSession()}>End session</button></div>
+        <p className="muted">Live web access unavailable. This chat cannot verify current news, prices, or offers.</p>
+        {desktop && engine?.engine === 'api' && engine.profiles && <ProviderChatControls engine={engine} sessionId={sessionId} preferences={preferences} onPreferences={setPreferences} onChange={engineChanged} busy={busy} draft={input} revision={messages.length + contextRevision} onSummarize={() => void sendProviderMessage('summarize')} onNewChat={() => void startSession()} />}
         <div className="messages" aria-live="polite">{messages.map((message) => <div className={`message ${message.role === 'assistant' ? 'ai' : 'user'}`} key={message.id}>{message.role === 'assistant' && <strong>{companion.name} · AI<br /></strong>}{message.content}</div>)}</div>
+        {engine?.profiles && engine.engine === 'api' && <div className="actions">
+          {messages.at(-1)?.role === 'user' && <button disabled={busy} className="secondary-btn" onClick={() => void sendProviderMessage('retry')}>Retry unanswered message (may cost)</button>}
+          {lastReply?.status === 'truncated' && lastReply.content && messages.at(-1)?.role === 'assistant' && <button disabled={busy} className="secondary-btn" onClick={() => void sendProviderMessage('continue')}>Continue (may cost)</button>}
+          {lastReply && <small>Result: {lastReply.status}. Input: {lastReply.usage.input ?? 'unknown'} · Output: {lastReply.usage.output ?? 'unknown'} tokens. Estimated cost: {lastReply.usage.estimatedUsd == null ? 'unknown' : `$${lastReply.usage.estimatedUsd.toFixed(5)} USD`}.</small>}
+        </div>}
         {notice && <div className="safety-notice" role="alert">{notice}</div>}
         {desktop && engine?.engine === 'api' && <div className="api-consent card">
           <h3>API processing permission</h3>
           <p>{engine.baseUrl} receives your companion instructions and the messages in this conversation. Your provider bills your account. Potentially sensitive conversations are blocked; detection is not a guarantee.</p>
           {companion.cloudPolicy === 'disabled' ? <p>This companion allows local processing only. Select a local model in Settings.</p> : <><p>{companion.cloudPolicy === 'ask-every-time' ? 'This companion requires permission for each request.' : 'Permission lasts for this chat and expires on restart, connection change, or revocation.'} Already sent requests cannot be recalled.</p><button className="secondary-btn" disabled={busy} onClick={() => void toggleCloudPermission()}>{status.cloudPermission === 'none' ? companion.cloudPolicy === 'ask-every-time' ? 'Allow next request' : 'Allow API for this chat' : 'Revoke API permission'}</button></>}
         </div>}
-        <div className="composer"><label className="sr-only" htmlFor="chat-input">Message</label><textarea id="chat-input" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} /><button className="primary-btn" disabled={busy} onClick={() => void sendMessage()}>{busy ? 'Thinking…' : 'Send'}</button></div>
+        <div className="composer"><label className="sr-only" htmlFor="chat-input">Message</label><textarea id="chat-input" disabled={busy} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} /><button className="primary-btn" disabled={busy} onClick={() => void sendMessage()}>{busy ? 'Thinking…' : 'Send'}</button>{requestId && <button className="secondary-btn" onClick={() => void cancelProviderRequest(requestId).catch(e => setNotice(engineError(e)))}>Stop</button>}</div>
       </div></section>}
       {screen === 'summary' && <section className="screen active"><h2>Session summary</h2><div className="grid two"><div className="card"><h3>Companion</h3><p>{companion.name}</p></div><div className="card"><h3>Data handling</h3><p>{status.executionMode === 'local' ? 'Local execution' : 'Cloud execution'} · {status.memoryMode === 'session' ? 'Nothing added to durable memory' : 'Consented memory'}</p></div></div><div className="actions section-gap"><button className="primary-btn" onClick={() => setScreen('library')}>Save companion</button><button className="ghost-btn" onClick={() => setScreen('home')}>Done</button></div></section>}
       {screen === 'creator' && <section className="screen active"><button className="ghost-btn" onClick={() => setScreen('home')}>← Cancel</button><h2>Create a companion</h2><p>Step {creatorStep + 1} of 5</p>{notice && <div className="safety-notice" role="alert">{notice}</div>}
@@ -259,6 +329,7 @@ export default function App() {
       </section>}
       {screen === 'library' && <section className="screen active"><h2>My Companions</h2><p>Versioned companion manifests with explicit boundaries.</p><div className="library-list">{availableCompanions.map((item) => <div className="card library-row" key={item.id}><div><h3>{item.name}</h3><p>{item.purpose}</p><small>Risk: {item.riskClass} · Minimum age: {item.minimumAge}</small></div><button className="primary-btn" onClick={() => review(item)}>Use</button></div>)}</div></section>}
       {screen === 'settings' && activeChat && <button className="secondary-btn section-gap" onClick={() => setScreen('chat')}>Return to chat</button>}
+      {screen === 'library' && <section className="section-gap"><h2>Saved conversations</h2>{notice && <p role="alert">{notice}</p>}{savedSessions.length === 0 ? <p>No saved conversations yet.</p> : <ul className="connection-list">{savedSessions.map(saved => <li key={saved.id}><strong>{availableCompanions.find(c => c.id === saved.companionId)?.name ?? 'Unavailable companion'}</strong> · {new Date(saved.createdAt).toLocaleString()} <button disabled={busy} className="secondary-btn" onClick={() => void reopenSession(saved)}>Open conversation</button></li>)}</ul>}</section>}
       {screen === 'settings' && desktop && engine && <EngineSetup status={engine} onChange={engineChanged} />}
       {screen === 'settings' && <section className="screen active"><h2>Privacy and data</h2>{notice && <div className="safety-notice" role="alert">{notice}</div>}<div className="grid two">
         <div className="card"><h3>Inspectable memory · {companion.name}</h3><p>Durable memory is off by default. Each write requires confirmation.</p><label htmlFor="memory-content">Memory content</label><textarea id="memory-content" value={memoryText} onChange={(event) => setMemoryText(event.target.value)} /><label className="consent-row"><input type="checkbox" checked={memoryConsent} onChange={(event) => setMemoryConsent(event.target.checked)} /> I explicitly consent to saving this memory locally.</label><button className="secondary-btn" onClick={() => void remember()}>Save memory</button><ul className="memory-list">{memories.map((memory) => <li key={memory.id}><span>{memory.content}</span><button className="danger-btn" onClick={() => void forget(memory.id)}>Delete</button></li>)}</ul></div>
