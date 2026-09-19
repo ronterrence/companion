@@ -1,0 +1,6 @@
+# Vercel serves the static release site directly; do not upload source, dependencies, or build caches.
+*
+!website/
+!website/**
+!vercel.json
+!.vercelignore
