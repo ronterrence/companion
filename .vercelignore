@@ -1,6 +1,10 @@
-# Vercel serves the static release site directly; do not upload source, dependencies, or build caches.
-*
-!website/
-!website/**
-!vercel.json
-!.vercelignore
+# Vercel serves the static release site directly. Exclude generated and dependency trees,
+# while keeping `website/`, which is the configured output directory.
+node_modules/
+src-tauri/target/
+dist/
+website-dist/
+test-results/
+coverage/
+playwright-report/
+.git/
