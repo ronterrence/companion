@@ -21,9 +21,6 @@ models/
 src-tauri/runtime/
 website/downloads/*
 !website/downloads/SHA256SUMS.txt
-!website/downloads/Companion-Studio-0.3.0-x64-setup.exe
-!website/downloads/Companion-Studio-0.3.0-x64.msi
-!website/downloads/Companion-Studio-0.3.0_aarch64.dmg
 !website/downloads/Companion-Studio-0.4.0-x64-setup.exe
 !website/downloads/Companion-Studio-0.4.0-x64.msi
 !website/downloads/Companion-Studio-0.4.0_aarch64.dmg
@@ -62,3 +59,5 @@ mvp_docs/images_design/
 /docs/macos-qualification-template.md
 /docs/provider-chat-prd.md
 /docs/provider-chat.md
+
+.vercel

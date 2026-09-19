@@ -16,7 +16,7 @@ Vercel serves the committed `website/` directory. Committing application source 
    npm run preview:website
    ```
 
-   Run preparation from the clean source commit used by CI. The command checks GitHub's run/job results, metadata, exact artifact contents, and original checksums. It builds and verifies a staged website before copying any public files. It does not trigger a deployment. Existing 0.3.0 files and checksum entries remain available.
+   Run preparation from the clean source commit used by CI. The command checks GitHub's run/job results, metadata, exact artifact contents, and original checksums. It builds and verifies a staged website before copying any public files. It does not trigger a deployment. It removes older versioned public installers and their checksum entries; local build artifacts remain untouched.
 4. Review the Windows EXE/MSI and Mac DMG links, platform versions, first-open instructions, metadata links, and desktop/mobile layout. Run `npm run test:release` and `npm run verify:downloads`.
 5. With separate installation approval, smoke-test the Windows upgrade: version 0.4.0, preserved conversations and connections, visible provider controls. Do not send paid API requests without an approved test account and budget.
 6. Commit the prepared website, release record, checksums, and versioned binaries together and push. Verify the new Vercel deployment commit. Download its three installers and compare their hashes with `website/release.json` and the published checksum manifest. Report the new deployment URL; an older deployment-specific URL can continue serving its original snapshot.

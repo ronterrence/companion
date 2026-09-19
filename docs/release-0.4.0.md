@@ -22,4 +22,4 @@ Live-provider qualification remains pending on both platforms. Preserved connect
 
 ## Artifact identity
 
-The authoritative filenames and SHA-256 hashes are committed in `website/release.json` and `website/downloads/SHA256SUMS.txt`. Original Windows and Mac build metadata are published alongside the downloads under versioned filenames. The website release commit is separate from the source commit used to build these installers. Older 0.3.0 files remain available for existing links.
+The authoritative filenames and SHA-256 hashes are committed in `website/release.json` and `website/downloads/SHA256SUMS.txt`. Original Windows and Mac build metadata are published alongside the downloads under versioned filenames. The website release commit is separate from the source commit used to build these installers. Website downloads contain only the current 0.4.0 release; older artifacts remain only in local build output.

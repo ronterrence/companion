@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { digest, inspectArtifact, parseChecksums, validateRun } from './release-assets.mjs';
 import { verifyDownloads } from './verify-downloads.mjs';
@@ -24,13 +24,16 @@ const files = [
   { name: `Companion-Studio-${version}-macos-BUILD-INFO.txt`, bytes: mac.metadataBytes },
   { name: `Companion-Studio-${version}-windows-BUILD-INFO.txt`, bytes: windows.metadataBytes },
 ];
+const releaseNames = new Set([...files.map(file => file.name), 'SHA256SUMS.txt']);
 const stage = join(root, 'test-results', `website-release-${Date.now()}`);
 await mkdir(stage, { recursive: true });
 await cp(join(root, 'website'), stage, { recursive: true });
-const manifest = parseChecksums(await readFile(join(stage, 'downloads/SHA256SUMS.txt'), 'utf8'));
+for (const name of await readdir(join(stage, 'downloads'))) {
+  if (name.startsWith('Companion-Studio-') && !releaseNames.has(name)) await rm(join(stage, 'downloads', name));
+}
+const manifest = new Map();
 for (const file of files) {
   const hash = digest(file.bytes);
-  assert(!manifest.has(file.name) || manifest.get(file.name) === hash, `Refusing to replace different bytes at an existing release URL: ${file.name}`);
   await writeFile(join(stage, 'downloads', file.name), file.bytes);
   manifest.set(file.name, hash);
 }
@@ -47,6 +50,9 @@ await writeFile(join(stage, 'index.html'), html);
 await writeFile(join(stage, 'release.json'), JSON.stringify({ version, sourceCommit, workflowRun: run.url, workflowRunAttempt: run.attempt, macQualification: 'awaiting_hardware_verification', macMetadata: files[3].name, files: files.map(file => ({ name: file.name, sha256: digest(file.bytes) })) }, null, 2) + '\n');
 console.log(await verifyDownloads(stage));
 // No public changes until all artifacts and the complete staged site pass validation.
+for (const name of await readdir(join(root, 'website/downloads'))) {
+  if (name.startsWith('Companion-Studio-') && !releaseNames.has(name)) await rm(join(root, 'website/downloads', name));
+}
 for (const file of files) await cp(join(stage, 'downloads', file.name), join(root, 'website/downloads', file.name));
 for (const name of ['downloads/SHA256SUMS.txt', 'index.html', 'release.json']) await cp(join(stage, name), join(root, 'website', name));
 console.log(`Prepared ${version} from ${sourceCommit}. Commit website assets to publish; no deployment has been triggered by this command.`);

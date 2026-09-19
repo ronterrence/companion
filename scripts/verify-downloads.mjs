@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { JSDOM } from 'jsdom';
@@ -25,10 +25,15 @@ export async function verifyDownloads(root) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   if (release) {
     assert(/^[a-f0-9]{40}$/.test(release.sourceCommit));
+    const releaseNames = new Set(release.files.map(file => file.name));
+    assert.deepEqual(new Set(manifest.keys()), releaseNames, 'Published checksum manifest contains stale or missing release files');
     for (const file of release.files) {
       assert.equal(manifest.get(file.name), file.sha256, 'Release record checksum mismatch');
       assert(file.name.includes(release.version), 'Release filename version mismatch');
       assert(document.querySelector(`a[download][href="downloads/${file.name}"]`), 'Release download missing from page');
+    }
+    for (const name of await readdir(join(root, 'downloads'))) {
+      assert(!name.startsWith('Companion-Studio-') || releaseNames.has(name), 'Published downloads contain a stale release file');
     }
     for (const platform of ['windows', 'macos']) {
       assert.equal(document.querySelector(`#${platform}-version`)?.textContent, release.version, 'Displayed platform version mismatch');
