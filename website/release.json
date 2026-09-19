@@ -1,0 +1,30 @@
+{
+  "version": "0.4.0",
+  "sourceCommit": "03e7a50a9229989e4a9fdb5ef9ee43cc614d091f",
+  "workflowRun": "https://github.com/ronterrence/companion/actions/runs/35242230714",
+  "workflowRunAttempt": 1,
+  "macQualification": "awaiting_hardware_verification",
+  "macMetadata": "Companion-Studio-0.4.0-macos-BUILD-INFO.txt",
+  "files": [
+    {
+      "name": "Companion-Studio-0.4.0-x64-setup.exe",
+      "sha256": "3ca1d095fe7456dc8d9badb8d7e1d2cf564a2b4943f9d39d81e48e9b8bde237b"
+    },
+    {
+      "name": "Companion-Studio-0.4.0-x64.msi",
+      "sha256": "98f7977237902ec7215f8ce8370ea920f2657574c0267264f028c8998d9addf6"
+    },
+    {
+      "name": "Companion-Studio-0.4.0_aarch64.dmg",
+      "sha256": "987214463319a01aad348264be8ee86ae6a963749dd1a7027ff1c71bb930c779"
+    },
+    {
+      "name": "Companion-Studio-0.4.0-macos-BUILD-INFO.txt",
+      "sha256": "68c3ca15f34a3c0448a94c91a74a92cd3efd0895dee265a6d369e339687022ce"
+    },
+    {
+      "name": "Companion-Studio-0.4.0-windows-BUILD-INFO.txt",
+      "sha256": "db988cddb960004117ddf0a4a0a7777439465c35672045c7e0e97d9095fc085b"
+    }
+  ]
+}

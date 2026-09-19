@@ -1,0 +1,6 @@
+product=Companion Studio
+version=0.4.0
+source_commit=03e7a50a9229989e4a9fdb5ef9ee43cc614d091f
+workflow_run=https://github.com/ronterrence/companion/actions/runs/35242230714
+workflow_run_attempt=1
+qualification_status=awaiting_hardware_verification
