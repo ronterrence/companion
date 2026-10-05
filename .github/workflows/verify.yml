@@ -51,7 +51,7 @@ jobs:
           "@ | Set-Content -LiteralPath "$destination/BUILD-INFO.txt" -Encoding utf8
       - uses: actions/upload-artifact@v4
         with:
-          name: Companion-Studio-0.4.0-windows-x64-preview
+          name: Companion-Studio-0.4.1-windows-x64-preview
           path: src-tauri/target/windows-artifact/*
           if-no-files-found: error
           retention-days: 14
@@ -100,7 +100,7 @@ jobs:
         run: |
           cat > BUILD-INFO.txt <<EOF
           product=Companion Studio
-          version=0.4.0
+          version=0.4.1
           source_commit=$GITHUB_SHA
           workflow_run=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           workflow_run_attempt=$GITHUB_RUN_ATTEMPT
@@ -110,7 +110,7 @@ jobs:
         run: npm run verify:mac -- --artifact
       - uses: actions/upload-artifact@v4
         with:
-          name: Companion-Studio-0.4.0-macos-arm64-preview
+          name: Companion-Studio-0.4.1-macos-arm64-preview
           path: |
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/SHA256SUMS.txt
