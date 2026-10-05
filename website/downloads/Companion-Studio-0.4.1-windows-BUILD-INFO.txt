@@ -1,0 +1,5 @@
+product=Companion Studio
+version=0.4.1
+source_commit=adbc4cb8a954fd6144c6f3ac06b7b5693f4b0e7d
+workflow_run=https://github.com/ronterrence/companion/actions/runs/37308416782
+workflow_run_attempt=1

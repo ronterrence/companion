@@ -1,5 +1,5 @@
-3ca1d095fe7456dc8d9badb8d7e1d2cf564a2b4943f9d39d81e48e9b8bde237b  Companion-Studio-0.4.0-x64-setup.exe
-98f7977237902ec7215f8ce8370ea920f2657574c0267264f028c8998d9addf6  Companion-Studio-0.4.0-x64.msi
-987214463319a01aad348264be8ee86ae6a963749dd1a7027ff1c71bb930c779  Companion-Studio-0.4.0_aarch64.dmg
-68c3ca15f34a3c0448a94c91a74a92cd3efd0895dee265a6d369e339687022ce  Companion-Studio-0.4.0-macos-BUILD-INFO.txt
-db988cddb960004117ddf0a4a0a7777439465c35672045c7e0e97d9095fc085b  Companion-Studio-0.4.0-windows-BUILD-INFO.txt
+6786cf65fde9437db2f61c4ffc6f2f8229142106f011df5b326c0aa0366d9680  Companion-Studio-0.4.1-x64-setup.exe
+292c61fcb319e8ffd634573d3e19949638924c273984795ad24dd6037e24b57d  Companion-Studio-0.4.1-x64.msi
+b6de0e2a08c0ff2c0775ec2788cf93d153f5a6e80173e76749872cb4656fe0a2  Companion-Studio-0.4.1_aarch64.dmg
+b4f81f175ce0a6c2061bdd82616e7c27fa399f2701bc7e85261d6378e153bbd9  Companion-Studio-0.4.1-macos-BUILD-INFO.txt
+66d7b81d127db43ad422fe291f18805a787c23d84be3dea25f4b9a8bc52c1dbf  Companion-Studio-0.4.1-windows-BUILD-INFO.txt
