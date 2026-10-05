@@ -16,7 +16,7 @@ Separate OpenAI, Claude, DeepSeek, and custom provider profiles; provider-specif
 
 ## Qualification limits
 
-The Mac download is an **unqualified preview**, ad-hoc signed and unnotarized, targeting macOS 13+ on Apple silicon. Real-Mac installation, Metal acceleration, upgrade behavior, and installed-app Keychain access remain pending. Its original metadata retains `qualification_status=awaiting_hardware_verification`.
+The Mac download is an **unqualified preview**, ad-hoc signed and unnotarized, targeting macOS 13+ on Apple silicon. On October 5, 2026, the published DMG was installed on a Scaleway M1 Mac mini running macOS 26.6.1. Local chat replied; the bundled runtime's log showed Metal layer offload; saved chat and the database Keychain entry survived app relaunch. Reopening that chat switched the 0.4.0 app to Prototype mode until **Use local model** was selected again in Settings. Clean-machine installation, macOS 13, upgrade behavior, offline chat, provider credential persistence, and live-provider qualification remain pending. See [the hardware record](macos-qualification-2026-10-05.md). Original build metadata retains `qualification_status=awaiting_hardware_verification`.
 
 Live-provider qualification remains pending on both platforms. Preserved connection settings do not establish that a live model request succeeds.
 
