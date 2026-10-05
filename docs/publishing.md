@@ -23,7 +23,7 @@ Vercel serves the committed `website/` directory. Committing application source 
 
 ## Mac unqualified preview
 
-Website publication is authorized after automated checks pass; real-Mac hardware testing is not a publication gate for this preview. The download must say **unqualified preview**, targets macOS 13+ on Apple silicon, ad-hoc signed and unnotarized, with real-Mac installation, Metal acceleration, upgrade behavior, installed-app Keychain access, and live-provider qualification pending.
+Website publication is authorized after automated checks pass; full real-Mac qualification is not a publication gate for this preview. The download must say **unqualified preview**, target macOS 13+ on Apple silicon, and disclose ad-hoc signing and lack of notarization. Update the hardware-check list as evidence is recorded for the exact published DMG; keep untested checks and known defects visible beside the download.
 
 Keep the original `BUILD-INFO.txt` contents under a versioned website filename, including `qualification_status=awaiting_hardware_verification`. Publishing does not confer hardware qualification. CI tests CPU inference and disposable Keychain entries, not real GPU behavior or installed-app Keychain access. Record later hardware checks against the exact DMG hash; do not transfer results to rebuilt bytes.
 
