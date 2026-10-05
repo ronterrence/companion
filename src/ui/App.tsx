@@ -85,6 +85,7 @@ export default function App() {
           if (context.model && context.model !== savedProfile.model) await saveProviderProfile({ ...savedProfile, model: context.model, limits: context.limits });
           await chooseProviderProfile(savedProfile.id);
         }
+        else if (saved.executionMode === 'local' && engine.local.installed) await selectEngine('local');
         else await selectEngine('prototype');
         nextEngine = await getEngineStatus(); engineChanged(nextEngine);
         const activity = await providerActivity();
@@ -94,7 +95,7 @@ export default function App() {
       if (desktop) await beginChat(saved.id, selected);
       setCompanion(selected); setSessionId(saved.id); setMessages(await repository.listMessages(saved.id));setActiveChat(true);setInput('');setScreen('chat');setContextRevision(v => v + 1);
       setStatus(current => ({ ...current, executionMode: nextEngine?.engine === 'api' ? 'cloud' : 'local', cloudPermission: 'none', safetyPolicyVersion: selected.policyVersion }));
-      setNotice(saved.executionMode === 'cloud' && nextEngine?.engine === 'api' ? 'Conversation restored. Authorize the selected provider before sending more messages.' : 'Conversation restored. Select a model in Settings before continuing.');
+      setNotice(saved.executionMode === 'cloud' && nextEngine?.engine === 'api' ? 'Conversation restored. Authorize the selected provider before sending more messages.' : nextEngine?.engine === 'local' ? 'Conversation restored. Local model ready.' : 'Conversation restored. Select a model in Settings before continuing.');
     } catch (e) { setNotice(engineError(e)); } finally { setBusy(false); }
   }
 
