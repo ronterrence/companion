@@ -39,7 +39,7 @@ export async function verifyDownloads(root) {
       assert.equal(document.querySelector(`#${platform}-version`)?.textContent, release.version, 'Displayed platform version mismatch');
     }
     const notice = document.querySelector('#mac-qualification')?.textContent ?? '';
-    for (const phrase of ['unqualified preview', 'Metal', 'Keychain', 'pending', 'unnotarized']) assert(notice.includes(phrase), `Missing Mac disclosure: ${phrase}`);
+    for (const phrase of ['This preview', 'Metal', 'Keychain', 'pending', 'unnotarized']) assert(notice.includes(phrase), `Missing Mac disclosure: ${phrase}`);
     assert(document.querySelector('#mac-first-open'), 'Missing Mac first-open instructions');
     const info = parseMetadata(await readFile(join(root, 'downloads', release.macMetadata), 'utf8'));
     assert.equal(info.source_commit, release.sourceCommit);

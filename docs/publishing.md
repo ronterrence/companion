@@ -9,8 +9,8 @@ Vercel serves the committed `website/` directory. Committing application source 
 3. Download both artifacts into a new local directory:
 
    ```powershell
-   gh run download RUN_ID --repo ronterrence/companion --name Companion-Studio-0.4.0-windows-x64-preview --dir test-results/release/windows
-   gh run download RUN_ID --repo ronterrence/companion --name Companion-Studio-0.4.0-macos-arm64-preview --dir test-results/release/macos
+   gh run download RUN_ID --repo ronterrence/companion --name Companion-Studio-0.4.1-windows-x64-preview --dir test-results/release/windows
+   gh run download RUN_ID --repo ronterrence/companion --name Companion-Studio-0.4.1-macos-arm64-preview --dir test-results/release/macos
    npm run prepare:downloads -- RUN_ID test-results/release
    npm run build:website
    npm run preview:website
@@ -21,9 +21,9 @@ Vercel serves the committed `website/` directory. Committing application source 
 5. With separate installation approval, smoke-test the Windows upgrade: version 0.4.0, preserved conversations and connections, visible provider controls. Do not send paid API requests without an approved test account and budget.
 6. Commit the prepared website, release record, checksums, and versioned binaries together and push. Verify the new Vercel deployment commit. Download its three installers and compare their hashes with `website/release.json` and the published checksum manifest. Report the new deployment URL; an older deployment-specific URL can continue serving its original snapshot.
 
-## Mac unqualified preview
+## Mac preview qualification
 
-Website publication is authorized after automated checks pass; full real-Mac qualification is not a publication gate for this preview. The download must say **unqualified preview**, target macOS 13+ on Apple silicon, and disclose ad-hoc signing and lack of notarization. Update the hardware-check list as evidence is recorded for the exact published DMG; keep untested checks and known defects visible beside the download.
+Website publication is authorized after automated checks pass; full real-Mac qualification is not a publication gate for this preview. The download must identify itself as a **preview**, target macOS 13+ on Apple silicon, and disclose ad-hoc signing and lack of notarization. The previous 0.4.0 DMG passed installation, local chat, and Metal checks on an M1 Mac mini; do not attribute those results to the untested 0.4.1 DMG. Keep untested checks and known defects visible beside the download.
 
 Keep the original `BUILD-INFO.txt` contents under a versioned website filename, including `qualification_status=awaiting_hardware_verification`. Publishing does not confer hardware qualification. CI tests CPU inference and disposable Keychain entries, not real GPU behavior or installed-app Keychain access. Record later hardware checks against the exact DMG hash; do not transfer results to rebuilt bytes.
 
